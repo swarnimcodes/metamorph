@@ -15,6 +15,9 @@ pub enum AppError {
     BadRequest(String),
     #[error("{0}")]
     Conflict(String),
+    /// A 409 whose body carries extra top-level fields (e.g. `similar`) next to `error`.
+    #[error("{message}")]
+    ConflictWith { message: String, extra: serde_json::Value },
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
 }
@@ -48,7 +51,7 @@ impl IntoResponse for AppError {
             AppError::NotFound => StatusCode::NOT_FOUND,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
-            AppError::Conflict(_) => StatusCode::CONFLICT,
+            AppError::Conflict(_) | AppError::ConflictWith { .. } => StatusCode::CONFLICT,
             AppError::Internal(err) => {
                 tracing::error!(error = ?err, "internal error");
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -58,6 +61,10 @@ impl IntoResponse for AppError {
             AppError::Internal(_) => "internal server error".to_string(),
             other => other.to_string(),
         };
-        (status, Json(json!({ "error": message }))).into_response()
+        let mut body = json!({ "error": message });
+        if let AppError::ConflictWith { extra: serde_json::Value::Object(extra), .. } = self {
+            body.as_object_mut().expect("object literal").extend(extra);
+        }
+        (status, Json(body)).into_response()
     }
 }
