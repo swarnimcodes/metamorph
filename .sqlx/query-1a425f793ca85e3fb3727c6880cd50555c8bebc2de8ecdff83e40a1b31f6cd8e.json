@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select we.id, we.exercise_id, e.name as exercise_name, we.position,\n                we.variant_key, we.superset_group, we.notes\n           from workout_exercises we\n           join exercises e on e.id = we.exercise_id\n          where we.workout_id = $1 and we.deleted_at is null\n          order by we.position, we.created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "exercise_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "exercise_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "exercise_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "position",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "position"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "variant_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "variant_key"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "superset_group",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "superset_group"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "notes",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "notes"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "1a425f793ca85e3fb3727c6880cd50555c8bebc2de8ecdff83e40a1b31f6cd8e"
+}

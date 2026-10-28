@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select coalesce(merged_into_id, id) as \"id!\" from exercises\n            where id = $1 and deleted_at is null\n              and (status = 'official' or created_by = $2)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7a7735eb86c3e49445aa88d9baa724a1dfda3ba609de1bdf062ce489f8b23f33"
+}

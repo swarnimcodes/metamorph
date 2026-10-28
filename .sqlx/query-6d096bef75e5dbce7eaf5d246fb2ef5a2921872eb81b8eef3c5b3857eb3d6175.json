@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update workouts set ended_at = coalesce(ended_at, now())\n            where id = $1 and user_id = $2 and deleted_at is null\n        returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6d096bef75e5dbce7eaf5d246fb2ef5a2921872eb81b8eef3c5b3857eb3d6175"
+}

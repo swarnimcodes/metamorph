@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update workouts\n              set title = coalesce($3, title),\n                  notes = coalesce($4, notes),\n                  gym_id = coalesce($5, gym_id),\n                  started_at = coalesce($6, started_at),\n                  ended_at = coalesce($7, ended_at)\n            where id = $1 and user_id = $2 and deleted_at is null\n        returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "740df6baa3211438758bdb3c4a6db8060b1f859bcef8bdc9d4a3bf63c813b731"
+}

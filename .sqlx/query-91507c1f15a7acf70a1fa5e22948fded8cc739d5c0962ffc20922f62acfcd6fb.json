@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select wt.workout_exercise_id, t.id, t.slug, t.name,\n                  t.category as \"category: TagCategory\"\n             from workout_exercise_tags wt\n             join variation_tags t on t.id = wt.tag_id\n             join workout_exercises we on we.id = wt.workout_exercise_id\n            where we.workout_id = $1\n            order by t.slug",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "workout_exercise_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workout_exercise_tags",
+            "name": "workout_exercise_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "variation_tags",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "variation_tags",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "variation_tags",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "category: TagCategory",
+        "type_info": {
+          "Custom": {
+            "name": "tag_category",
+            "kind": {
+              "Enum": [
+                "equipment",
+                "grip",
+                "angle",
+                "stance",
+                "other"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "variation_tags",
+            "name": "category"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "91507c1f15a7acf70a1fa5e22948fded8cc739d5c0962ffc20922f62acfcd6fb"
+}

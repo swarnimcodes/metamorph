@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update sets s set deleted_at = now()\n             from workout_exercises we, workouts w\n            where s.id = $1 and we.id = s.workout_exercise_id and w.id = we.workout_id\n              and w.user_id = $2 and w.deleted_at is null\n              and we.deleted_at is null and s.deleted_at is null\n        returning s.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "449620f9c90268072966f3644bb54d0febb00c70bef41b0abdcafb5c8c307345"
+}

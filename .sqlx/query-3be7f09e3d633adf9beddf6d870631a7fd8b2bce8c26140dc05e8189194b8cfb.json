@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update workouts set deleted_at = now()\n          where id = $1 and user_id = $2 and deleted_at is null\n      returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3be7f09e3d633adf9beddf6d870631a7fd8b2bce8c26140dc05e8189194b8cfb"
+}

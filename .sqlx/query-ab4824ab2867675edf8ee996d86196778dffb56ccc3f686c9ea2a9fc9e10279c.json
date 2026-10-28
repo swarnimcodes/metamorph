@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select we.id from workout_exercises we\n             join workouts w on w.id = we.workout_id\n            where we.id = $1 and w.user_id = $2\n              and w.deleted_at is null and we.deleted_at is null\n              for update of we",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ab4824ab2867675edf8ee996d86196778dffb56ccc3f686c9ea2a9fc9e10279c"
+}

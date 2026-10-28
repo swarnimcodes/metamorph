@@ -1,0 +1,5 @@
+[workspace]
+resolver = "3"
+members = ["crates/api"]
+# The Tauri crate is its own project and is built through the tauri CLI.
+exclude = ["app/src-tauri"]

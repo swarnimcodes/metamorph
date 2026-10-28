@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update sets set deleted_at = now() where workout_exercise_id = $1 and deleted_at is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "694c29faa059f227d1bbae00ecd6e9784c61349846c4c7336f276b1a464ebfa5"
+}
