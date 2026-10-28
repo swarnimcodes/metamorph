@@ -1,5 +1,6 @@
 mod auth;
 mod exercises;
+mod gyms;
 mod workouts;
 
 use axum::{Json, Router, extract::State, routing::get};
@@ -13,6 +14,7 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(health))
         .merge(auth::routes())
         .merge(exercises::routes())
+        .merge(gyms::routes())
         .merge(workouts::routes());
 
     if state.config.dev_login {
