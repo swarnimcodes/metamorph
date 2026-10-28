@@ -56,7 +56,16 @@ export function WorkoutDetail({ id }: { id: string }) {
           <div className="stack-lg">
             {w.exercises.map((we) => (
               <section key={we.id} className="card exercise" aria-label={we.exercise_name}>
-                <h2>{we.exercise_name}</h2>
+                <h2>
+                  <a
+                    className="exercise-link"
+                    href={`#${paths.exercise(we.exercise_id, we.variant_key, paths.detail(id))}`}
+                    aria-label={`${we.exercise_name}, view progress`}
+                  >
+                    <span>{we.exercise_name}</span>
+                    <span className="exercise-link-chevron" aria-hidden="true">›</span>
+                  </a>
+                </h2>
                 {we.tags.length > 0 && (
                   <div className="chips">
                     {we.tags.map((t) => (

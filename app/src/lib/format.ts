@@ -42,3 +42,11 @@ export function formatSet(s: WorkoutSet, unit: UnitSystem): string {
   if (s.duration_s !== null) parts.push(`${s.duration_s} s`);
   return parts.join(" · ");
 }
+
+/** "Wed 28 Oct 2026" from a "YYYY-MM-DD" calendar date (no timezone shift). */
+export function formatDay(date: string, withYear = true): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(undefined, {
+    weekday: "short", day: "numeric", month: "short", year: withYear ? "numeric" : undefined, timeZone: "UTC",
+  });
+}

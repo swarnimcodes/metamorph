@@ -157,3 +157,76 @@ export interface NewGym {
   city?: string;
   force?: boolean;
 }
+
+// ---- Stats ----------------------------------------------------------------
+// Dates are local calendar dates ("YYYY-MM-DD") in the user's own timezone.
+// Weights are kg, distances metres, durations seconds.
+
+export interface ConsistencyDay {
+  date: string;
+  workouts: number;
+  sets: number;
+  volume_kg: number;
+}
+
+export interface Consistency {
+  timezone: string;
+  /** Monday of the first week shown. */
+  from: string;
+  /** Today in the user's timezone (inclusive). */
+  to: string;
+  /** Only days with at least one workout, ascending. */
+  days: ConsistencyDay[];
+  totals: { workouts: number; active_days: number; sets: number; volume_kg: number };
+  streak: { current_weeks: number; longest_weeks: number };
+}
+
+export interface StatsExercise {
+  exercise_id: string;
+  name: string;
+  kind: ExerciseKind;
+  /** "" means untagged. */
+  variant_key: string;
+  variant_label: string;
+  sessions: number;
+  last_performed: string;
+}
+
+export interface ProgressPoint {
+  date: string;
+  workout_id: string;
+  sets: number;
+  volume_kg: number | null;
+  top_weight_kg: number | null;
+  best_e1rm_kg: number | null;
+  top_reps: number | null;
+  total_reps: number | null;
+  best_duration_s: number | null;
+  total_duration_s: number | null;
+  best_distance_m: number | null;
+  total_distance_m: number | null;
+}
+
+export interface RecordEntry {
+  value: number;
+  date: string;
+}
+
+export interface ProgressRecords {
+  top_weight_kg: RecordEntry | null;
+  best_e1rm_kg: RecordEntry | null;
+  best_volume_kg: RecordEntry | null;
+  top_reps: RecordEntry | null;
+  best_duration_s: RecordEntry | null;
+  best_distance_m: RecordEntry | null;
+}
+
+export interface ExerciseProgress {
+  exercise_id: string;
+  name: string;
+  kind: ExerciseKind;
+  /** null when aggregating all variants, else the key echoed back. */
+  variant_key: string | null;
+  points: ProgressPoint[];
+  records: ProgressRecords;
+}

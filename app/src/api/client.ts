@@ -1,6 +1,6 @@
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  Exercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SavedGym, SetInput, Tag, UsernameAvailability, Workout,
+  Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SavedGym, SetInput, Tag, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -26,13 +26,15 @@ interface Opts {
   body?: unknown;
   query?: Record<string, string | number | undefined>;
   auth?: boolean;
+  /** Send query params whose value is "" (the default drops them). */
+  keepEmpty?: boolean;
   retried?: boolean;
 }
 
-function url(path: string, query?: Opts["query"]): string {
+function url(path: string, query?: Opts["query"], keepEmpty = false): string {
   const u = new URL(path, API_URL.endsWith("/") ? API_URL : API_URL + "/");
   for (const [k, v] of Object.entries(query ?? {})) {
-    if (v !== undefined && v !== "") u.searchParams.set(k, String(v)); // encodes '+' etc.
+    if (v !== undefined && (v !== "" || keepEmpty)) u.searchParams.set(k, String(v)); // encodes '+' etc.
   }
   return u.toString();
 }
@@ -45,7 +47,7 @@ async function send(method: string, path: string, opts: Opts): Promise<Response>
     if (s) headers.Authorization = `Bearer ${s.accessToken}`;
   }
   try {
-    return await fetch(url(path, opts.query), {
+    return await fetch(url(path, opts.query, opts.keepEmpty), {
       method,
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
@@ -156,5 +158,13 @@ export const api = {
   searchGyms: (q: string, limit = 20) => request<Gym[]>("GET", "/gyms", { query: { q, limit } }),
   createGym: (body: NewGym) => request<Gym>("POST", "/gyms", { body }),
   myGyms: () => request<SavedGym[]>("GET", "/me/gyms"),
+  consistency: (weeks?: number) => request<Consistency>("GET", "/stats/consistency", { query: { weeks } }),
+  statsExercises: () => request<StatsExercise[]>("GET", "/stats/exercises"),
+  /** variantKey: undefined = all variations, "" = untagged only. */
+  exerciseProgress: (exerciseId: string, variantKey?: string) =>
+    request<ExerciseProgress>("GET", `/stats/exercises/${exerciseId}/progress`, {
+      query: variantKey === undefined ? undefined : { variant_key: variantKey },
+      keepEmpty: true,
+    }),
   setDefaultGym: (id: string) => request<void>("PUT", `/me/gyms/${id}/default`),
 };
