@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into user_gyms (user_id, gym_id, is_default) values ($1, $2, true)\n         on conflict (user_id, gym_id) do update set is_default = true",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c5ae91f6d719e1b189b4fab21e718c1ad13f64b7cbbc0c171686e34ed013b881"
+}

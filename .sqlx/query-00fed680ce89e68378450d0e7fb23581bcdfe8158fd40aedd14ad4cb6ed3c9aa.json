@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into refresh_tokens (user_id, token_hash, family_id, user_agent, expires_at)\n         values ($1, $2, $3, $4, now() + make_interval(secs => $5))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bytea",
+        "Uuid",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "00fed680ce89e68378450d0e7fb23581bcdfe8158fd40aedd14ad4cb6ed3c9aa"
+}

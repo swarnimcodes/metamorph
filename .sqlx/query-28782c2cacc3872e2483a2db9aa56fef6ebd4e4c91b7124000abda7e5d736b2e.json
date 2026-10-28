@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update refresh_tokens set revoked_at = now()\n              where revoked_at is null\n                and family_id = (select family_id from refresh_tokens\n                                  where token_hash = $1 and revoked_at is not null)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "28782c2cacc3872e2483a2db9aa56fef6ebd4e4c91b7124000abda7e5d736b2e"
+}

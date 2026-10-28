@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with recursive chain as (\n               select id, merged_into_id from exercises where id = $1\n               union all\n               select e.id, e.merged_into_id from exercises e join chain c on e.id = c.merged_into_id\n           ), target as (\n               select id from chain where merged_into_id is null\n           )\n           select we.id, w.id as workout_id, w.started_at\n             from workout_exercises we\n             join workouts w on w.id = we.workout_id\n            where w.user_id = $2 and w.deleted_at is null and we.deleted_at is null\n              and we.variant_key = $3\n              and (we.exercise_id in (select id from target)\n                   or we.exercise_id in (select id from exercises\n                                          where merged_into_id in (select id from target)))\n            order by w.started_at desc, we.created_at desc\n            limit 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workout_exercises",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "workout_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "started_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "dedee661e4361c19bc1137df7be1796d8c3340c4194c4566aa0dc09946feb664"
+}

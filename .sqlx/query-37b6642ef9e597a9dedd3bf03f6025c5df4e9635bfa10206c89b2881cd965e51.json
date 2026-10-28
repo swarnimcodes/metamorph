@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select count(*) as \"n!\", count(distinct family_id) as \"families!\",\n                count(*) filter (where revoked_at is null) as \"live!\"\n           from refresh_tokens",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "families!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "live!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "37b6642ef9e597a9dedd3bf03f6025c5df4e9635bfa10206c89b2881cd965e51"
+}

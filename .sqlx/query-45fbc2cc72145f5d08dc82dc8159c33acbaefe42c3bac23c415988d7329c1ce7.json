@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into user_gyms (user_id, gym_id, is_default)\n         values ($1, $2, not exists (select 1 from user_gyms where user_id = $1 and is_default))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "45fbc2cc72145f5d08dc82dc8159c33acbaefe42c3bac23c415988d7329c1ce7"
+}

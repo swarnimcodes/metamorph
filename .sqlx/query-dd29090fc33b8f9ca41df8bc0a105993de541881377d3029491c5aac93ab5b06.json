@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with q as (\n                   select btrim(lower(regexp_replace(replace(replace($1::text, '''', ''), '’', ''),\n                                                     '[^[:alnum:]]+', ' ', 'g'))) as nq\n               ), cand as (\n                   select g.id, g.name, g.chain, g.address, g.city, g.verified,\n                          similarity(btrim(lower(regexp_replace(replace(replace(g.name, '''', ''), '’', ''),\n                                                                '[^[:alnum:]]+', ' ', 'g'))), q.nq) as score\n                     from gyms g, q\n                    where g.deleted_at is null\n                      and ($2::text is null or lower(g.city) = lower($2))\n               )\n               select id as \"id!\", name as \"name!\", chain, address, city, verified as \"verified!\"\n                 from cand\n                where score > 0.5\n                order by score desc, name\n                limit 10",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "chain",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "chain"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "address",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "address"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "city",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "city"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "verified!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "verified"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "dd29090fc33b8f9ca41df8bc0a105993de541881377d3029491c5aac93ab5b06"
+}

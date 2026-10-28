@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update user_gyms set is_default = false where user_id = $1 and is_default",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c3acfab1d29883f8b3e3ef417e7df08bffcae920dd3dccbb18f221e99e4e3e02"
+}

@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, position, set_type as \"set_type: SetType\",\n                  weight_kg, reps, duration_s, distance_m, rpe, note, completed_at\n             from sets\n            where workout_exercise_id = $1 and deleted_at is null\n            order by position, created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "position",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "position"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "set_type: SetType",
+        "type_info": {
+          "Custom": {
+            "name": "set_type",
+            "kind": {
+              "Enum": [
+                "working",
+                "warmup",
+                "drop",
+                "failure"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "set_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "weight_kg",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "weight_kg"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "reps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "reps"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "duration_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "duration_s"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "distance_m",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "distance_m"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "rpe",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "rpe"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "note",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "note"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "completed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "completed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "702fc966d635d79ef5bf585cd38912b380428106a2cccf439cd2cda5a032cc56"
+}

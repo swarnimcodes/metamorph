@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update exercises set merged_into_id = $1 where id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c3197dbf97e0a6bece6d77bdfe2e61d47c53dba1ded931532d49e03558a4b219"
+}
