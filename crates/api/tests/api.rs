@@ -661,3 +661,81 @@ async fn my_gyms_never_shows_other_users_gyms(pool: PgPool) {
     let (_, w) = post(&app, "/workouts", &a, json!({})).await;
     assert!(w["gym_id"].is_null());
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn workouts_carry_exercise_kind_and_gym_name(pool: PgPool) {
+    let app = app(pool.clone(), true);
+    let (token, _) = login(&app, "gymrat").await;
+    let plank = exercise_id(&app, &token, "plank").await;
+
+    let (status, gym) = post(&app, "/gyms", &token, json!({ "name": "Golds Gym Aundh", "city": "Pune" })).await;
+    assert_eq!(status, StatusCode::CREATED, "{gym}");
+
+    let (_, w) = post(&app, "/workouts", &token, json!({ "gym_id": gym["id"] })).await;
+    assert_eq!(w["gym"]["name"], "Golds Gym Aundh");
+    assert_eq!(w["gym"]["city"], "Pune");
+    let wid = w["id"].as_str().unwrap().to_string();
+
+    let (_, we) =
+        post(&app, &format!("/workouts/{wid}/exercises"), &token, json!({ "exercise_id": plank })).await;
+    assert_eq!(we["kind"], "duration");
+
+    let (_, detail) = get(&app, &format!("/workouts/{wid}"), &token).await;
+    assert_eq!(detail["exercises"][0]["kind"], "duration");
+    assert_eq!(detail["gym"]["id"], gym["id"]);
+
+    let (_, list) = get(&app, "/workouts", &token).await;
+    assert_eq!(list[0]["gym"]["name"], "Golds Gym Aundh");
+
+    // A workout without a gym reports null rather than omitting the field.
+    let (_, bare) = post(&app, "/workouts", &token, json!({})).await;
+    assert!(bare["gym"].is_null());
+    let (_, list) = get(&app, "/workouts", &token).await;
+    assert!(list.as_array().unwrap().iter().any(|w| w["gym"].is_null()));
+
+    // History keeps the gym name even after the gym is soft-deleted.
+    sqlx::query("update gyms set deleted_at = now()").execute(&pool).await.unwrap();
+    let (_, detail) = get(&app, &format!("/workouts/{wid}"), &token).await;
+    assert_eq!(detail["gym"]["name"], "Golds Gym Aundh");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn patch_me_updates_preferences_and_validates(pool: PgPool) {
+    let app = app(pool, true);
+    let (token, _) = login(&app, "prefs").await;
+
+    let (status, me) = call(
+        &app,
+        Method::PATCH,
+        "/me",
+        Some(&token),
+        Some(json!({ "unit_system": "imperial", "timezone": "Asia/Kolkata", "display_name": "  Prefs P  " })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{me}");
+    assert_eq!(me["unit_system"], "imperial");
+    assert_eq!(me["timezone"], "Asia/Kolkata");
+    assert_eq!(me["display_name"], "Prefs P");
+
+    // Omitted fields stay as they were, and GET /me reflects the change.
+    let (_, me) =
+        call(&app, Method::PATCH, "/me", Some(&token), Some(json!({ "display_name": "Prefs" }))).await;
+    assert_eq!(me["unit_system"], "imperial");
+    let (_, me) = get(&app, "/me", &token).await;
+    assert_eq!(me["display_name"], "Prefs");
+    assert_eq!(me["timezone"], "Asia/Kolkata");
+
+    for bad in [
+        json!({ "timezone": "Mars/Olympus" }),
+        json!({ "display_name": "   " }),
+        json!({ "unit_system": "furlongs" }),
+    ] {
+        let (status, _) = call(&app, Method::PATCH, "/me", Some(&token), Some(bad.clone())).await;
+        assert!(status.is_client_error(), "{bad} should be rejected, got {status}");
+    }
+    let (_, me) = get(&app, "/me", &token).await;
+    assert_eq!(me["unit_system"], "imperial", "rejected requests must not change anything");
+
+    let (status, _) = call(&app, Method::PATCH, "/me", None, Some(json!({}))).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}

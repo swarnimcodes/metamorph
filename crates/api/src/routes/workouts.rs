@@ -14,9 +14,10 @@ use uuid::Uuid;
 
 use crate::{
     AppState,
+    extract::AppJson,
     auth::AuthUser,
     error::{AppError, AppResult},
-    models::{SetType, TagCategory},
+    models::{ExerciseKind, SetType, TagCategory},
 };
 
 pub fn routes() -> Router<AppState> {
@@ -63,6 +64,7 @@ pub struct WorkoutExerciseOut {
     id: Uuid,
     exercise_id: Uuid,
     exercise_name: String,
+    kind: ExerciseKind,
     position: i32,
     variant_key: String,
     superset_group: Option<i32>,
@@ -71,11 +73,27 @@ pub struct WorkoutExerciseOut {
     sets: Vec<SetOut>,
 }
 
+/// The gym a workout was logged at, so clients never need a second lookup for its name.
+#[derive(Serialize)]
+pub struct GymRef {
+    id: Uuid,
+    name: String,
+    city: Option<String>,
+}
+
+impl GymRef {
+    /// Built from a left-joined gym row; a soft-deleted gym keeps its name in history.
+    fn from_join(id: Option<Uuid>, name: Option<String>, city: Option<String>) -> Option<Self> {
+        Some(Self { id: id?, name: name?, city })
+    }
+}
+
 #[derive(Serialize)]
 pub struct WorkoutOut {
     id: Uuid,
     title: Option<String>,
     gym_id: Option<Uuid>,
+    gym: Option<GymRef>,
     #[serde(with = "time::serde::rfc3339")]
     started_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339::option")]
@@ -89,6 +107,7 @@ pub struct WorkoutSummary {
     id: Uuid,
     title: Option<String>,
     gym_id: Option<Uuid>,
+    gym: Option<GymRef>,
     #[serde(with = "time::serde::rfc3339")]
     started_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339::option")]
@@ -99,8 +118,11 @@ pub struct WorkoutSummary {
 
 async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<WorkoutOut> {
     let w = sqlx::query!(
-        "select id, title, gym_id, started_at, ended_at, notes
-           from workouts where id = $1 and user_id = $2 and deleted_at is null",
+        r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.city as "gym_city?",
+                  w.started_at, w.ended_at, w.notes
+             from workouts w
+             left join gyms g on g.id = w.gym_id
+            where w.id = $1 and w.user_id = $2 and w.deleted_at is null"#,
         id,
         user_id
     )
@@ -109,12 +131,13 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
     .ok_or(AppError::NotFound)?;
 
     let exercises = sqlx::query!(
-        "select we.id, we.exercise_id, e.name as exercise_name, we.position,
+        r#"select we.id, we.exercise_id, e.name as exercise_name,
+                e.kind as "kind: ExerciseKind", we.position,
                 we.variant_key, we.superset_group, we.notes
            from workout_exercises we
            join exercises e on e.id = we.exercise_id
           where we.workout_id = $1 and we.deleted_at is null
-          order by we.position, we.created_at",
+          order by we.position, we.created_at"#,
         id
     )
     .fetch_all(pool)
@@ -175,6 +198,7 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
         id: w.id,
         title: w.title,
         gym_id: w.gym_id,
+        gym: GymRef::from_join(w.gym_id, w.gym_name, w.gym_city),
         started_at: w.started_at,
         ended_at: w.ended_at,
         notes: w.notes,
@@ -186,6 +210,7 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
                 id: e.id,
                 exercise_id: e.exercise_id,
                 exercise_name: e.exercise_name,
+                kind: e.kind,
                 position: e.position,
                 variant_key: e.variant_key,
                 superset_group: e.superset_group,
@@ -271,7 +296,7 @@ struct CreateWorkout {
 async fn create(
     State(state): State<AppState>,
     AuthUser(user_id): AuthUser,
-    Json(body): Json<CreateWorkout>,
+    AppJson(body): AppJson<CreateWorkout>,
 ) -> AppResult<(StatusCode, Json<WorkoutOut>)> {
     let id = sqlx::query_scalar!(
         r#"insert into workouts (user_id, title, gym_id, notes, started_at)
@@ -302,9 +327,9 @@ async fn list(
     Query(params): Query<ListParams>,
 ) -> AppResult<Json<Vec<WorkoutSummary>>> {
     let limit = params.limit.unwrap_or(20).clamp(1, 100);
-    let rows = sqlx::query_as!(
-        WorkoutSummary,
-        r#"select w.id, w.title, w.gym_id, w.started_at, w.ended_at,
+    let rows = sqlx::query!(
+        r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.city as "gym_city?",
+                  w.started_at, w.ended_at,
                   (select count(*) from workout_exercises we
                     where we.workout_id = w.id and we.deleted_at is null) as "exercise_count!",
                   (select count(*) from sets s
@@ -312,6 +337,7 @@ async fn list(
                     where we.workout_id = w.id and we.deleted_at is null
                       and s.deleted_at is null) as "set_count!"
              from workouts w
+             left join gyms g on g.id = w.gym_id
             where w.user_id = $1 and w.deleted_at is null
               and ($2::timestamptz is null or w.started_at < $2)
             order by w.started_at desc
@@ -322,7 +348,20 @@ async fn list(
     )
     .fetch_all(&state.pool)
     .await?;
-    Ok(Json(rows))
+    let summaries = rows
+        .into_iter()
+        .map(|r| WorkoutSummary {
+            id: r.id,
+            title: r.title,
+            gym_id: r.gym_id,
+            gym: GymRef::from_join(r.gym_id, r.gym_name, r.gym_city),
+            started_at: r.started_at,
+            ended_at: r.ended_at,
+            exercise_count: r.exercise_count,
+            set_count: r.set_count,
+        })
+        .collect();
+    Ok(Json(summaries))
 }
 
 async fn detail(
@@ -349,7 +388,7 @@ async fn update(
     State(state): State<AppState>,
     AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
-    Json(body): Json<UpdateWorkout>,
+    AppJson(body): AppJson<UpdateWorkout>,
 ) -> AppResult<Json<WorkoutOut>> {
     let updated = sqlx::query_scalar!(
         r#"update workouts
@@ -424,7 +463,7 @@ async fn add_exercise(
     State(state): State<AppState>,
     AuthUser(user_id): AuthUser,
     Path(workout_id): Path<Uuid>,
-    Json(body): Json<AddExercise>,
+    AppJson(body): AppJson<AddExercise>,
 ) -> AppResult<(StatusCode, Json<WorkoutExerciseOut>)> {
     let mut tx = state.pool.begin().await?;
 
@@ -536,7 +575,7 @@ async fn add_set(
     State(state): State<AppState>,
     AuthUser(user_id): AuthUser,
     Path(we_id): Path<Uuid>,
-    Json(body): Json<NewSet>,
+    AppJson(body): AppJson<NewSet>,
 ) -> AppResult<(StatusCode, Json<SetOut>)> {
     let mut tx = state.pool.begin().await?;
 
@@ -604,7 +643,7 @@ async fn update_set(
     State(state): State<AppState>,
     AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
-    Json(body): Json<UpdateSet>,
+    AppJson(body): AppJson<UpdateSet>,
 ) -> AppResult<Json<SetOut>> {
     let set = sqlx::query_as!(
         SetOut,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select we.id, we.exercise_id, e.name as exercise_name, we.position,\n                we.variant_key, we.superset_group, we.notes\n           from workout_exercises we\n           join exercises e on e.id = we.exercise_id\n          where we.workout_id = $1 and we.deleted_at is null\n          order by we.position, we.created_at",
+  "query": "select we.id, we.exercise_id, e.name as exercise_name,\n                e.kind as \"kind: ExerciseKind\", we.position,\n                we.variant_key, we.superset_group, we.notes\n           from workout_exercises we\n           join exercises e on e.id = we.exercise_id\n          where we.workout_id = $1 and we.deleted_at is null\n          order by we.position, we.created_at",
   "describe": {
     "columns": [
       {
@@ -38,6 +38,29 @@
       },
       {
         "ordinal": 3,
+        "name": "kind: ExerciseKind",
+        "type_info": {
+          "Custom": {
+            "name": "exercise_kind",
+            "kind": {
+              "Enum": [
+                "weight_reps",
+                "bodyweight_reps",
+                "duration",
+                "distance"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
         "name": "position",
         "type_info": "Int4",
         "origin": {
@@ -48,7 +71,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "variant_key",
         "type_info": "Text",
         "origin": {
@@ -59,7 +82,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "superset_group",
         "type_info": "Int4",
         "origin": {
@@ -70,7 +93,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "notes",
         "type_info": "Text",
         "origin": {
@@ -92,9 +115,10 @@
       false,
       false,
       false,
+      false,
       true,
       true
     ]
   },
-  "hash": "1a425f793ca85e3fb3727c6880cd50555c8bebc2de8ecdff83e40a1b31f6cd8e"
+  "hash": "e7d982cdeec29c5a0ec88e81e8a0116e388fd972801b47999dac563fa822254f"
 }

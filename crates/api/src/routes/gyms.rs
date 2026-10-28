@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::{
     AppState,
+    extract::AppJson,
     auth::AuthUser,
     error::{AppError, AppResult},
 };
@@ -111,7 +112,7 @@ fn clean(v: Option<String>) -> Option<String> {
 async fn create(
     State(state): State<AppState>,
     AuthUser(user_id): AuthUser,
-    Json(body): Json<CreateGym>,
+    AppJson(body): AppJson<CreateGym>,
 ) -> AppResult<(StatusCode, Json<GymOut>)> {
     let name = body.name.trim().to_string();
     if name.is_empty() {

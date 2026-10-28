@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select id, title, gym_id, started_at, ended_at, notes\n           from workouts where id = $1 and user_id = $2 and deleted_at is null",
+  "query": "select w.id, w.title, w.gym_id, g.name as \"gym_name?\", g.city as \"gym_city?\",\n                  w.started_at, w.ended_at, w.notes\n             from workouts w\n             left join gyms g on g.id = w.gym_id\n            where w.id = $1 and w.user_id = $2 and w.deleted_at is null",
   "describe": {
     "columns": [
       {
@@ -38,6 +38,28 @@
       },
       {
         "ordinal": 3,
+        "name": "gym_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "gym_city?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "city"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
         "name": "started_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -48,7 +70,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 6,
         "name": "ended_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -59,7 +81,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 7,
         "name": "notes",
         "type_info": "Text",
         "origin": {
@@ -80,10 +102,12 @@
       false,
       true,
       true,
+      true,
+      true,
       false,
       true,
       true
     ]
   },
-  "hash": "2618340d5a63f0739a23cc90ff1041e258d1c27073fad3c51ed56a8903eef317"
+  "hash": "9be1f57a784abf6473106cd1c2ca51068b8cdebca2817612cfd79a41d6d29ddb"
 }

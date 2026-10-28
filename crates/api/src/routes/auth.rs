@@ -9,13 +9,14 @@ use uuid::Uuid;
 
 use crate::{
     AppState,
+    extract::AppJson,
     auth::{AuthUser, Session, issue_session, rotate_session},
     error::{AppError, AppResult},
     models::UnitSystem,
 };
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/me", get(me)).route("/auth/refresh", post(refresh))
+    Router::new().route("/me", get(me).patch(update_me)).route("/auth/refresh", post(refresh))
 }
 
 /// Only mounted when `DEV_LOGIN` is on.
@@ -41,6 +42,57 @@ async fn me(State(state): State<AppState>, AuthUser(user_id): AuthUser) -> AppRe
                   avatar_url, unit_system as "unit_system: UnitSystem", timezone
              from users where id = $1 and deleted_at is null"#,
         user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::Unauthorized)?;
+    Ok(Json(me))
+}
+
+/// Omitted fields are left unchanged.
+#[derive(Deserialize)]
+struct UpdateMe {
+    display_name: Option<String>,
+    unit_system: Option<UnitSystem>,
+    timezone: Option<String>,
+}
+
+async fn update_me(
+    State(state): State<AppState>,
+    AuthUser(user_id): AuthUser,
+    AppJson(body): AppJson<UpdateMe>,
+) -> AppResult<Json<Me>> {
+    let display_name = body.display_name.map(|s| s.trim().to_string());
+    if let Some(name) = &display_name
+        && (name.is_empty() || name.chars().count() > 80)
+    {
+        return Err(AppError::BadRequest("display_name must be 1-80 characters".into()));
+    }
+    if let Some(tz) = &body.timezone {
+        let known = sqlx::query_scalar!(
+            r#"select exists (select 1 from pg_timezone_names where name = $1) as "known!""#,
+            tz
+        )
+        .fetch_one(&state.pool)
+        .await?;
+        if !known {
+            return Err(AppError::BadRequest("unknown timezone".into()));
+        }
+    }
+
+    let me = sqlx::query_as!(
+        Me,
+        r#"update users
+              set display_name = coalesce($2, display_name),
+                  unit_system = coalesce($3, unit_system),
+                  timezone = coalesce($4, timezone)
+            where id = $1 and deleted_at is null
+        returning id, username::text as "username!", display_name, email::text as "email!",
+                  avatar_url, unit_system as "unit_system: UnitSystem", timezone"#,
+        user_id,
+        display_name,
+        body.unit_system as Option<UnitSystem>,
+        body.timezone
     )
     .fetch_optional(&state.pool)
     .await?
@@ -92,7 +144,7 @@ struct Refresh {
 async fn refresh(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<Refresh>,
+    AppJson(body): AppJson<Refresh>,
 ) -> AppResult<Json<LoginResponse>> {
     let (user_id, session) =
         rotate_session(&state.pool, &state.config, &body.refresh_token, user_agent(&headers)).await?;
@@ -110,7 +162,7 @@ async fn refresh(
 async fn dev_login(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<DevLogin>,
+    AppJson(body): AppJson<DevLogin>,
 ) -> AppResult<Json<LoginResponse>> {
     let username = body.username.trim().to_lowercase();
     let display_name = body.display_name.unwrap_or_else(|| username.clone());
