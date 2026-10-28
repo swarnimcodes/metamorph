@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api, ApiError, setSessionExpiredHandler, storeLogin } from "../api/client";
 import { clearSession, loadSession } from "../api/tokenStorage";
+import { disableGoogleAutoSelect } from "../lib/google";
 import type { LoginResponse, Me, MeUpdate } from "../api/types";
 
 type Status = "loading" | "signed-out" | "signed-in" | "unreachable";
@@ -13,7 +14,7 @@ interface AuthState {
   init: () => Promise<void>;
   /** Shared tail of every sign-in method: persist tokens, then load the profile. */
   completeLogin: (r: LoginResponse) => Promise<void>;
-  /** Dev-only username login. A Google sign-in would call completeLogin() with its own response. */
+  /** Dev-only username login. Google sign-in calls completeLogin() with its own response. */
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
   /** PATCH /me; the returned profile replaces the stored user so every screen re-renders. */
@@ -46,6 +47,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    disableGoogleAutoSelect();
     clearSession();
     set({ status: "signed-out", user: null });
   },

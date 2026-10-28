@@ -26,6 +26,30 @@ export interface LoginResponse {
   refresh_expires_in: number;
 }
 
+export interface GoogleSignupRequired {
+  signup_required: true;
+  signup_token: string;
+  suggested_username: string;
+  display_name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+export type GoogleLoginResult = (LoginResponse & { signup_required: false }) | GoogleSignupRequired;
+
+export type UsernameUnavailableReason = "invalid" | "reserved" | "taken";
+
+export interface UsernameAvailability {
+  available: boolean;
+  reason?: UsernameUnavailableReason;
+}
+
+export interface GoogleSignupBody {
+  signup_token: string;
+  username: string;
+  display_name: string;
+}
+
 export interface Exercise {
   id: string;
   slug: string | null;

@@ -27,6 +27,9 @@ importers:
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.12.4
+      '@types/google.accounts':
+        specifier: ^0.0.18
+        version: 0.0.18
       '@types/react':
         specifier: ^19.1.8
         version: 19.3.0
@@ -292,6 +295,9 @@ packages:
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
+
+  '@types/google.accounts@0.0.18':
+    resolution: {integrity: sha512-yHaPznll97ZnMJlPABHyeiIlLn3u6gQaUjA5k/O9lrrpgFB9VT10CKPLuKM0qTHMl50uXpW5sIcG+utm8jMOHw==}
 
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
@@ -782,6 +788,8 @@ snapshots:
   '@types/deep-eql@4.0.2': {}
 
   '@types/estree@1.0.9': {}
+
+  '@types/google.accounts@0.0.18': {}
 
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:

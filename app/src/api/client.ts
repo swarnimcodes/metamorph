@@ -1,6 +1,6 @@
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  Exercise, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SavedGym, SetInput, Tag, Workout,
+  Exercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SavedGym, SetInput, Tag, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -122,6 +122,12 @@ async function request<T>(method: string, path: string, opts: Opts = {}): Promis
 export const api = {
   devLogin: (username: string) =>
     request<LoginResponse>("POST", "/auth/dev-login", { body: { username }, auth: false }),
+  googleLogin: (idToken: string) =>
+    request<GoogleLoginResult>("POST", "/auth/google", { body: { id_token: idToken }, auth: false }),
+  usernameAvailable: (username: string) =>
+    request<UsernameAvailability>("GET", "/auth/username-available", { query: { username }, auth: false }),
+  googleSignup: (body: GoogleSignupBody) =>
+    request<LoginResponse>("POST", "/auth/google/signup", { body, auth: false }),
   me: () => request<Me>("GET", "/me"),
   updateMe: (body: MeUpdate) => request<Me>("PATCH", "/me", { body }),
 
