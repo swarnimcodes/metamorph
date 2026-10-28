@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into auth_identities (user_id, provider, provider_subject, email_at_signup, last_login_at)\n         values ($1, 'google', $2, $3, now())",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "972ae96a31535cacd4e0ecadfc225c295bc62297ae5948295d59b517205c3ea1"
+}

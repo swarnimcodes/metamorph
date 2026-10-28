@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select exists (select 1 from users where username = $1) as \"taken!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "taken!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f2a819c947e747d3b0ed2a3629560d7780ee885e25d025bc56c1cbfe3c6a3a57"
+}

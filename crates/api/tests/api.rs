@@ -20,7 +20,10 @@ fn app(pool: PgPool, dev_login: bool) -> Router {
             access_token_ttl_secs: 3600,
             dev_login,
             bind_addr: "127.0.0.1:0".parse().unwrap(),
+            google_client_ids: vec![],
+            cors_origins: vec![],
         }),
+        google: None,
     })
 }
 

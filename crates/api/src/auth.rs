@@ -10,10 +10,16 @@ use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{AppState, config::Config, error::AppError};
+use crate::{AppState, config::Config, error::AppError, google::GoogleIdentity};
 
+const ACCESS_TYP: &str = "access";
+const SIGNUP_TYP: &str = "signup";
+
+/// Access tokens and signup tokens are signed with the same secret, so each
+/// carries a `typ` that the other kind's verifier refuses.
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
+    typ: String,
     sub: Uuid,
     exp: u64,
 }
@@ -21,7 +27,7 @@ struct Claims {
 /// Issues the access token every login path (dev now, OAuth later) hands out.
 pub fn issue_access_token(config: &Config, user_id: Uuid) -> Result<String, AppError> {
     let exp = (time::OffsetDateTime::now_utc().unix_timestamp() as u64) + config.access_token_ttl_secs;
-    let claims = Claims { sub: user_id, exp };
+    let claims = Claims { typ: ACCESS_TYP.into(), sub: user_id, exp };
     encode(
         &Header::new(Algorithm::HS256),
         &claims,
@@ -31,6 +37,52 @@ pub fn issue_access_token(config: &Config, user_id: Uuid) -> Result<String, AppE
 }
 
 pub const REFRESH_TOKEN_TTL_SECS: u64 = 30 * 24 * 60 * 60;
+pub const SIGNUP_TOKEN_TTL_SECS: u64 = 10 * 60;
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SignupClaims {
+    typ: String,
+    /// The Google `sub`, not one of our user ids.
+    sub: String,
+    email: String,
+    name: Option<String>,
+    picture: Option<String>,
+    exp: u64,
+}
+
+/// Carries a verified Google identity between `/auth/google` and `/auth/google/signup`
+/// without creating an account until the user has chosen a username.
+pub fn issue_signup_token(config: &Config, identity: &GoogleIdentity) -> Result<String, AppError> {
+    let exp = (time::OffsetDateTime::now_utc().unix_timestamp() as u64) + SIGNUP_TOKEN_TTL_SECS;
+    let claims = SignupClaims {
+        typ: SIGNUP_TYP.into(),
+        sub: identity.sub.clone(),
+        email: identity.email.clone(),
+        name: identity.name.clone(),
+        picture: identity.picture.clone(),
+        exp,
+    };
+    encode(
+        &Header::new(Algorithm::HS256),
+        &claims,
+        &EncodingKey::from_secret(config.jwt_secret.as_bytes()),
+    )
+    .map_err(|e| AppError::Internal(e.into()))
+}
+
+pub fn verify_signup_token(config: &Config, token: &str) -> Result<GoogleIdentity, AppError> {
+    let data = decode::<SignupClaims>(
+        token,
+        &DecodingKey::from_secret(config.jwt_secret.as_bytes()),
+        &Validation::new(Algorithm::HS256),
+    )
+    .map_err(|_| AppError::Unauthorized)?;
+    let c = data.claims;
+    if c.typ != SIGNUP_TYP {
+        return Err(AppError::Unauthorized);
+    }
+    Ok(GoogleIdentity { sub: c.sub, email: c.email, name: c.name, picture: c.picture })
+}
 
 /// An access token plus the refresh token that renews it.
 #[derive(Debug)]
@@ -137,6 +189,9 @@ impl FromRequestParts<AppState> for AuthUser {
             &Validation::new(Algorithm::HS256),
         )
         .map_err(|_| AppError::Unauthorized)?;
+        if data.claims.typ != ACCESS_TYP {
+            return Err(AppError::Unauthorized);
+        }
         Ok(AuthUser(data.claims.sub))
     }
 }

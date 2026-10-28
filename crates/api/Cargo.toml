@@ -10,6 +10,7 @@ base64 = "0.23.1"
 dotenvy = "0.15.7"
 jsonwebtoken = { version = "11.1.0", features = ["rust_crypto"] }
 rand = "0.10.3"
+reqwest = { version = "0.13.5", features = ["json"] }
 rust_decimal = { version = "1.43.0", features = ["serde-float"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
@@ -24,5 +25,8 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 uuid = { version = "1.29.0", features = ["v7", "serde"] }
 
 [dev-dependencies]
+base64 = "0.23.1"
 http-body-util = "0.1.5"
+rand_core = { version = "0.6", features = ["getrandom"] }
+rsa = { version = "0.9", features = ["pem"] }
 tower = "0.5.3"

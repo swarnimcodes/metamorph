@@ -1,6 +1,11 @@
 use std::sync::Arc;
 
-use metamorph_api::{AppState, config::Config, router};
+use metamorph_api::{
+    AppState,
+    config::Config,
+    google::{GOOGLE_JWKS_URL, GoogleVerifier},
+    router,
+};
 use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
@@ -22,8 +27,13 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!("DEV_LOGIN is enabled: POST /auth/dev-login issues tokens without credentials");
     }
 
+    let google = (!config.google_client_ids.is_empty()).then(|| {
+        Arc::new(GoogleVerifier::remote(config.google_client_ids.clone(), GOOGLE_JWKS_URL.into()))
+    });
+    tracing::info!("Google sign-in {}", if google.is_some() { "enabled" } else { "disabled (GOOGLE_CLIENT_IDS unset)" });
+
     let addr = config.bind_addr;
-    let app = router(AppState { pool, config: Arc::new(config) });
+    let app = router(AppState { pool, config: Arc::new(config), google });
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on {addr}");
     axum::serve(listener, app).await?;

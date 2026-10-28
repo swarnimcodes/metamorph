@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into users (email, username, display_name, avatar_url)\n         values ($1, $2, $3, $4) returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        },
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        },
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8a04d4f302de517846d8b5df5b3d781055a38d0f8fe2bac8a86e93e72aae3722"
+}

@@ -107,7 +107,7 @@ struct DevLogin {
 }
 
 #[derive(Serialize)]
-struct LoginResponse {
+pub(super) struct LoginResponse {
     access_token: String,
     token_type: &'static str,
     expires_in: u64,
@@ -118,7 +118,7 @@ struct LoginResponse {
 }
 
 impl LoginResponse {
-    fn new(session: Session, user_id: Uuid, username: String) -> Self {
+    pub(super) fn new(session: Session, user_id: Uuid, username: String) -> Self {
         Self {
             access_token: session.access_token,
             token_type: "Bearer",
@@ -131,7 +131,7 @@ impl LoginResponse {
     }
 }
 
-fn user_agent(headers: &HeaderMap) -> Option<&str> {
+pub(super) fn user_agent(headers: &HeaderMap) -> Option<&str> {
     headers.get(USER_AGENT).and_then(|v| v.to_str().ok())
 }
 

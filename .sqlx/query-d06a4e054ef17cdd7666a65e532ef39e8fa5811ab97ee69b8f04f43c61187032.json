@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update auth_identities ai set last_login_at = now()\n             from users u\n            where ai.provider = 'google' and ai.provider_subject = $1\n              and u.id = ai.user_id and u.deleted_at is null\n        returning u.id, u.username::text as \"username!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "username!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "d06a4e054ef17cdd7666a65e532ef39e8fa5811ab97ee69b8f04f43c61187032"
+}
