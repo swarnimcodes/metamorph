@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with q as (\n               select btrim(lower(regexp_replace($1::text, '[^[:alnum:]]+', ' ', 'g'))) as nq\n           ), cand as (\n               select e.id, e.slug, e.name, e.kind, e.status,\n                      btrim(lower(regexp_replace(e.name, '[^[:alnum:]]+', ' ', 'g'))) as nname\n                 from exercises e\n                where e.deleted_at is null\n                  and e.merged_into_id is null\n                  and (e.status = 'official' or e.created_by = $2)\n           ), scored as (\n               select c.*,\n                      greatest(\n                          similarity(c.nname, q.nq),\n                          coalesce((select max(similarity(a.alias_normalized, q.nq))\n                                      from exercise_aliases a where a.exercise_id = c.id), 0)\n                      ) as score,\n                      (c.nname like '%' || q.nq || '%'\n                       or exists (select 1 from exercise_aliases a\n                                   where a.exercise_id = c.id\n                                     and a.alias_normalized like '%' || q.nq || '%')) as contains\n                 from cand c, q\n           )\n           select id as \"id!\", slug, name as \"name!\",\n                  kind as \"kind!: ExerciseKind\", status as \"status!: ExerciseStatus\"\n             from scored, q\n            where q.nq = '' or contains or score > 0.3\n            order by (case when q.nq = '' then 0 when contains then 1 else 0 end) desc,\n                     score desc, name\n            limit $3",
+  "query": "select distinct e.id as \"id!\", e.slug, e.name as \"name!\",\n                  e.kind as \"kind!: ExerciseKind\", e.status as \"status!: ExerciseStatus\",\n                  false as \"exact!\"\n             from exercises e\n             join exercise_variation_tags evt on evt.exercise_id = e.id\n            where evt.tag_id = any($1)\n              and e.deleted_at is null and e.merged_into_id is null\n              and (e.status = 'official' or e.created_by = $2)\n            order by e.name\n            limit $3",
   "describe": {
     "columns": [
       {
@@ -80,11 +80,17 @@
             "name": "status"
           }
         }
+      },
+      {
+        "ordinal": 5,
+        "name": "exact!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
+        "UuidArray",
         "Uuid",
         "Int8"
       ]
@@ -94,8 +100,9 @@
       true,
       false,
       false,
-      false
+      false,
+      null
     ]
   },
-  "hash": "0bc2cee1b10fa8220546ac8e924ce5457ac109b3a4a752551a60318b918f97ba"
+  "hash": "a40c71424005ea2a84d9754690e370eb7cc85a68f88c4d06c0272c148056a73d"
 }

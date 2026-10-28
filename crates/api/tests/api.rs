@@ -739,3 +739,111 @@ async fn patch_me_updates_preferences_and_validates(pool: PgPool) {
     let (status, _) = call(&app, Method::PATCH, "/me", None, Some(json!({}))).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn search_turns_tag_words_into_suggested_tags(pool: PgPool) {
+    let app = app(pool, true);
+    let (token, _) = login(&app, "tagger").await;
+    let preacher = tag_id(&app, &token, "preacher").await;
+    let incline = tag_id(&app, &token, "incline").await;
+    let dumbbell = tag_id(&app, &token, "dumbbell").await;
+    let cable = tag_id(&app, &token, "cable").await;
+
+    let search = |q: &'static str| {
+        let app = app.clone();
+        let token = token.clone();
+        async move { get(&app, &format!("/exercises?q={q}"), &token).await.1 }
+    };
+    let ids = |hit: &Value| -> Vec<String> {
+        let mut v: Vec<String> =
+            hit["suggested_tag_ids"].as_array().unwrap().iter().map(|t| t.as_str().unwrap().to_string()).collect();
+        v.sort();
+        v
+    };
+    let sorted = |tags: &[Uuid]| -> Vec<String> {
+        let mut v: Vec<String> = tags.iter().map(|t| t.to_string()).collect();
+        v.sort();
+        v
+    };
+
+    // The motivating case: "preacher curl" is Bicep Curl with the preacher tag.
+    for q in ["preacher%20curl", "preacher%20curls", "Preacher-Curl"] {
+        let r = search(q).await;
+        assert_eq!(r[0]["slug"], "bicep-curl", "q={q}: {r}");
+        assert_eq!(ids(&r[0]), sorted(&[preacher]), "q={q}");
+    }
+
+    // Several tags at once, in any order, around the exercise name.
+    let r = search("incline%20dumbbell%20bench%20press").await;
+    assert_eq!(r[0]["slug"], "bench-press");
+    assert_eq!(ids(&r[0]), sorted(&[incline, dumbbell]));
+    let r = search("cable%20lateral%20raise").await;
+    assert_eq!(r[0]["slug"], "lateral-raise");
+    assert_eq!(ids(&r[0]), sorted(&[cable]));
+
+    // A lone tag word lists the exercises that suggest it.
+    let r = search("preacher").await;
+    assert_eq!(r[0]["slug"], "bicep-curl");
+    assert_eq!(ids(&r[0]), sorted(&[preacher]));
+
+    // Exact names and aliases are never reinterpreted, even if they contain a tag word.
+    for (q, slug) in [("overhead%20press", "overhead-press"), ("bicep%20curl", "bicep-curl"), ("lat%20pulldowns", "lat-pulldown")] {
+        let r = search(q).await;
+        assert_eq!(r[0]["slug"], slug, "q={q}");
+        assert!(ids(&r[0]).is_empty(), "q={q} must not suggest tags, got {}", r[0]);
+    }
+
+    // Plain results always carry the field, empty.
+    let all = get(&app, "/exercises?limit=3", &token).await.1;
+    assert!(all.as_array().unwrap().iter().all(|e| e["suggested_tag_ids"] == json!([])));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn search_handles_partially_typed_tag_words(pool: PgPool) {
+    let app = app(pool, true);
+    let (token, _) = login(&app, "typist").await;
+    let preacher = tag_id(&app, &token, "preacher").await;
+    let dumbbell = tag_id(&app, &token, "dumbbell").await;
+    let ez_bar = tag_id(&app, &token, "ez-bar").await;
+
+    let search = |q: &'static str| {
+        let app = app.clone();
+        let token = token.clone();
+        async move { get(&app, &format!("/exercises?q={q}"), &token).await.1 }
+    };
+    let suggested = |hit: &Value| -> Vec<String> {
+        hit["suggested_tag_ids"].as_array().unwrap().iter().map(|t| t.as_str().unwrap().to_string()).collect()
+    };
+    let only = |tag: Uuid| vec![tag.to_string()];
+
+    // Every prefix from three letters on finds the preacher curl, as you type.
+    for q in ["pre", "prea", "preac", "preach", "preache", "preacher"] {
+        let r = search(q).await;
+        let hit = r.as_array().unwrap().iter().find(|e| e["slug"] == "bicep-curl")
+            .unwrap_or_else(|| panic!("q={q}: bicep-curl missing from {r}"));
+        assert_eq!(suggested(hit), only(preacher), "q={q}");
+    }
+    // ...also with the exercise word following a partial tag word.
+    let r = search("preach%20curl").await;
+    assert_eq!(r[0]["slug"], "bicep-curl");
+    assert_eq!(suggested(&r[0]), only(preacher));
+    let r = search("dumbb%20curl").await;
+    assert_eq!(r[0]["slug"], "bicep-curl");
+    assert_eq!(suggested(&r[0]), only(dumbbell));
+    let r = search("preacher%20cu").await;
+    assert_eq!(r[0]["slug"], "bicep-curl");
+    assert_eq!(suggested(&r[0]), only(preacher));
+
+    // A multi-word tag is anchored by its first word, so one more letter is enough.
+    let r = search("ez%20b").await;
+    assert!(r.as_array().unwrap().iter().any(|e| e["slug"] == "bicep-curl" && suggested(e) == only(ez_bar)), "{r}");
+
+    // Mid-way through an exercise name, name matches stay first.
+    let r = search("overhead").await;
+    assert_eq!(r[0]["slug"], "overhead-press", "{r}");
+    assert!(suggested(&r[0]).is_empty());
+
+    // Too short to guess: two letters never become a tag.
+    let r = search("pr").await;
+    assert!(r.as_array().unwrap().iter().all(|e| suggested(e).is_empty()), "{r}");
+}
