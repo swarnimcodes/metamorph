@@ -25,6 +25,7 @@ pub fn routes() -> Router<AppState> {
         .route("/workouts/{id}", get(detail).patch(update).delete(remove))
         .route("/workouts/{id}/finish", post(finish))
         .route("/workouts/{id}/exercises", post(add_exercise))
+        .route("/exercises/{id}/last", get(last_performance))
         .route("/workout-exercises/{id}", delete(remove_exercise))
         .route("/workout-exercises/{id}/sets", post(add_set))
         .route("/sets/{id}", patch(update_set).delete(remove_set))
@@ -192,6 +193,70 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
             })
             .collect(),
     })
+}
+
+#[derive(Deserialize)]
+struct LastParams {
+    #[serde(default)]
+    variant_key: String,
+}
+
+#[derive(Serialize)]
+struct LastPerformance {
+    workout_id: Uuid,
+    #[serde(with = "time::serde::rfc3339")]
+    started_at: OffsetDateTime,
+    sets: Vec<SetOut>,
+}
+
+/// The caller's most recent logged sets for an exercise with this exact variant,
+/// used to prefill a new set. A merged exercise resolves to its target, and
+/// entries logged against the merged-away duplicates still count.
+async fn last_performance(
+    State(state): State<AppState>,
+    AuthUser(user_id): AuthUser,
+    Path(exercise_id): Path<Uuid>,
+    Query(params): Query<LastParams>,
+) -> AppResult<Json<LastPerformance>> {
+    let entry = sqlx::query!(
+        r#"with recursive chain as (
+               select id, merged_into_id from exercises where id = $1
+               union all
+               select e.id, e.merged_into_id from exercises e join chain c on e.id = c.merged_into_id
+           ), target as (
+               select id from chain where merged_into_id is null
+           )
+           select we.id, w.id as workout_id, w.started_at
+             from workout_exercises we
+             join workouts w on w.id = we.workout_id
+            where w.user_id = $2 and w.deleted_at is null and we.deleted_at is null
+              and we.variant_key = $3
+              and (we.exercise_id in (select id from target)
+                   or we.exercise_id in (select id from exercises
+                                          where merged_into_id in (select id from target)))
+            order by w.started_at desc, we.created_at desc
+            limit 1"#,
+        exercise_id,
+        user_id,
+        params.variant_key
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::NotFound)?;
+
+    let sets = sqlx::query_as!(
+        SetOut,
+        r#"select id, position, set_type as "set_type: SetType",
+                  weight_kg, reps, duration_s, distance_m, rpe, note, completed_at
+             from sets
+            where workout_exercise_id = $1 and deleted_at is null
+            order by position, created_at"#,
+        entry.id
+    )
+    .fetch_all(&state.pool)
+    .await?;
+
+    Ok(Json(LastPerformance { workout_id: entry.workout_id, started_at: entry.started_at, sets }))
 }
 
 #[derive(Deserialize)]
