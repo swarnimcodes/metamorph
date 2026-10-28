@@ -34,6 +34,7 @@
 | [public.workout_exercises](public.workout_exercises.md) | 10 |  | BASE TABLE |
 | [public.workout_exercise_tags](public.workout_exercise_tags.md) | 2 |  | BASE TABLE |
 | [public.sets](public.sets.md) | 14 | Individual sets. Which of weight/reps/duration/distance are required depends on exercises.kind; enforced in the API. | BASE TABLE |
+| [_sqlx_test.databases](_sqlx_test.databases.md) | 3 |  | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -354,6 +355,11 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
   timestamp_with_time_zone deleted_at
+}
+"_sqlx_test.databases" {
+  text db_name
+  text test_path
+  timestamp_with_time_zone created_at
 }
 ```
 

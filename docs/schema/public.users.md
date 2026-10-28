@@ -39,7 +39,7 @@ Application accounts. Identity proof lives in auth_identities, not here.
 | users_timezone_not_null | n | NOT NULL timezone |
 | users_unit_system_not_null | n | NOT NULL unit_system |
 | users_updated_at_not_null | n | NOT NULL updated_at |
-| users_username_check | CHECK | CHECK ((username ~ '^[a-z0-9_]{3,30}$'::citext)) |
+| users_username_check | CHECK | CHECK (((username)::text ~ '^[a-z0-9_]{3,30}$'::text)) |
 | users_username_not_null | n | NOT NULL username |
 | users_pkey | PRIMARY KEY | PRIMARY KEY (id) |
 | users_email_key | UNIQUE | UNIQUE (email) |
