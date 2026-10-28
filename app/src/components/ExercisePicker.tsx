@@ -69,9 +69,9 @@ export function ExercisePicker({ open, onOpenChange }: { open: boolean; onOpenCh
     };
   }, [q, open]);
 
-  // Tags load lazily on the first tag step.
+  // Tags load when the sheet first opens: result rows name the suggested ones.
   useEffect(() => {
-    if (!chosen || tags) return;
+    if (!open || tags) return;
     setTagsFailed(false);
     api.tags().then(
       (t) => {
@@ -80,7 +80,14 @@ export function ExercisePicker({ open, onOpenChange }: { open: boolean; onOpenCh
       },
       () => setTagsFailed(true),
     );
-  }, [chosen, tags]);
+  }, [open, tags]);
+
+  const tagName = useMemo(() => new Map((tags ?? []).map((t) => [t.id, t.name])), [tags]);
+
+  function choose(ex: Exercise) {
+    setSelected(new Set(ex.suggested_tag_ids));
+    setChosen(ex);
+  }
 
   const grouped = useMemo(
     () =>
@@ -136,8 +143,13 @@ export function ExercisePicker({ open, onOpenChange }: { open: boolean; onOpenCh
           <ul className="list" aria-busy={searching}>
             {results.map((ex) => (
               <li key={ex.id}>
-                <button className="card row-btn" onClick={() => setChosen(ex)}>
-                  <span className="card-title">{ex.name}</span>
+                <button className="card row-btn" onClick={() => choose(ex)}>
+                  <span className="card-title">
+                    {ex.name}
+                    {ex.suggested_tag_ids.map((id) => tagName.get(id)).filter(Boolean).map((n) => (
+                      <span key={n} className="suggested"> + {n}</span>
+                    ))}
+                  </span>
                   <span className="dim small">{KIND_LABEL[ex.kind]}</span>
                 </button>
               </li>

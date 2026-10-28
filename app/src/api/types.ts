@@ -32,6 +32,8 @@ export interface Exercise {
   name: string;
   kind: ExerciseKind;
   status: "official" | "user" | string;
+  /** Variation tags the search query asked for (e.g. "preacher curl" suggests `preacher`). */
+  suggested_tag_ids: string[];
 }
 
 export interface Tag {
