@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select timezone from users where id = $1 and deleted_at is null",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "timezone",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "timezone"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4e1280f7ae222181f3e7bdde618825fbcccacac4e2dfe66d6743e12d53abde6c"
+}

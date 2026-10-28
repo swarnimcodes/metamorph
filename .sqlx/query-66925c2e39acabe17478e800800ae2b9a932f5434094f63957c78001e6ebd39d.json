@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select w.id as workout_id, (w.started_at at time zone $3::text)::date as \"date!\",\n                  s.weight_kg, s.reps, s.duration_s, s.distance_m\n             from workout_exercises we\n             join workouts w on w.id = we.workout_id\n             join sets s on s.workout_exercise_id = we.id\n            where w.user_id = $1 and w.deleted_at is null\n              and we.deleted_at is null and s.deleted_at is null and s.set_type <> 'warmup'\n              and we.exercise_id in (select id from exercises where id = $2 or merged_into_id = $2)\n              and ($4::text is null or we.variant_key = $4)\n            order by w.started_at, w.id, we.position, s.position",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "workout_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "date!",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "weight_kg",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "weight_kg"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "reps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "reps"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "duration_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "duration_s"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "distance_m",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "distance_m"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "66925c2e39acabe17478e800800ae2b9a932f5434094f63957c78001e6ebd39d"
+}
