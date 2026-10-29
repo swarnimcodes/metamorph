@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../api/client";
+import { workoutChanged } from "../lib/invalidate";
+import { useHistory } from "../lib/queries";
 import { formatDate, formatDuration, formatElapsed, plural } from "../lib/format";
 import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
 import { errMsg, useAuth } from "../stores/auth";
-import { useHistory } from "../stores/history";
 import { useNow } from "../lib/useNow";
 
 export function Home() {
   const user = useAuth((s) => s.user);
-  const { items, loading, loaded, hasMore, error, reload, loadMore } = useHistory();
+  const { items, pending, hasMore, loadMore, loadingMore, error, retry } = useHistory();
   const [starting, setStarting] = useState(false);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
 
   const unfinished = useMemo(() => items.find((w) => w.ended_at === null), [items]);
   const finished = items.filter((w) => w.ended_at !== null);
@@ -25,6 +22,7 @@ export function Home() {
     try {
       // The server starts the workout at the gym of your last one.
       const w = await api.createWorkout({});
+      void workoutChanged();
       navigate(paths.workout(w.id));
     } catch (e) {
       toastError(`Couldn't start workout: ${errMsg(e)}`);
@@ -49,14 +47,14 @@ export function Home() {
           </span>
         </button>
       ) : (
-        <button className="btn primary big" onClick={start} disabled={starting || (!loaded && loading)}>
+        <button className="btn primary big" onClick={start} disabled={starting || pending}>
           {starting ? "Starting…" : "Start workout"}
         </button>
       )}
 
       {error && (
         <p className="error" role="alert">
-          {error} <button className="link" onClick={() => void reload()}>Retry</button>
+          {error} <button className="link" onClick={retry}>Retry</button>
         </p>
       )}
 
@@ -81,11 +79,11 @@ export function Home() {
         })}
       </ul>
 
-      {loaded && finished.length === 0 && !unfinished && <p className="dim empty">No workouts yet. Start your first one.</p>}
-      {loading && !loaded && <p className="dim empty">Loading…</p>}
+      {!pending && !error && finished.length === 0 && !unfinished && <p className="dim empty">No workouts yet. Start your first one.</p>}
+      {pending && !error && <p className="dim empty">Loading…</p>}
       {hasMore && (
-        <button className="btn" onClick={() => void loadMore()} disabled={loading}>
-          {loading ? "Loading…" : "Load more"}
+        <button className="btn" onClick={loadMore} disabled={loadingMore}>
+          {loadingMore ? "Loading…" : "Load more"}
         </button>
       )}
     </main>

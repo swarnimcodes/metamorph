@@ -9,13 +9,11 @@ import { formatElapsed, formatSet } from "../lib/format";
 import { useNow } from "../lib/useNow";
 import { navigate, paths } from "../router";
 import { useAuth } from "../stores/auth";
-import { useHistory } from "../stores/history";
 import { referenceSet, useWorkout } from "../stores/workout";
 import type { WorkoutExercise } from "../api/types";
 
 export function ActiveWorkout({ id }: { id: string }) {
   const { workout, loading, error, load, clear, rename, finish, discard } = useWorkout();
-  const reloadHistory = useHistory((s) => s.reload);
   const now = useNow(1000);
   const [pickExercise, setPickExercise] = useState(false);
   const [pickGym, setPickGym] = useState(false);
@@ -47,7 +45,6 @@ export function ActiveWorkout({ id }: { id: string }) {
   async function onFinish() {
     setBusy(true);
     if (await finish()) {
-      void reloadHistory();
       navigate(paths.home);
     } else setBusy(false);
   }
@@ -55,7 +52,6 @@ export function ActiveWorkout({ id }: { id: string }) {
   async function onDiscard() {
     setBusy(true);
     if (await discard()) {
-      void reloadHistory();
       navigate(paths.home);
     } else {
       setBusy(false);

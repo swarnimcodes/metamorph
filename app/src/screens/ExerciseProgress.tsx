@@ -1,6 +1,6 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ExerciseProgress as Progress, ProgressPoint, ProgressRecords, UnitSystem } from "../api/types";
 import { LineChart } from "../components/LineChart";
 import { relativeStrength } from "../lib/bodyweight";
@@ -11,7 +11,7 @@ import {
 import { kgToDisplay, weightLabel } from "../lib/units";
 import { navigate, paths } from "../router";
 import { useAuth } from "../stores/auth";
-import { progressKey, useStats } from "../stores/stats";
+import { useBodyWeights, useProgress, useStatsExercises } from "../lib/queries";
 
 const kgText = (kg: number, unit: UnitSystem) => formatValue(kgToDisplay(kg, unit) ?? 0, "weight", unit);
 
@@ -62,26 +62,11 @@ const RELATIVE: MetricDef = {
 
 export function ExerciseProgress({ id, variant, from }: { id: string; variant: string | null; from: string | null }) {
   const unit = useAuth((s) => s.user?.unit_system ?? "metric");
-  const key = progressKey(id, variant);
-  const data = useStats((s) => s.progress[key]);
-  const error = useStats((s) => s.errors[key]);
-  const exercises = useStats((s) => s.exercises);
-  const loadProgress = useStats((s) => s.loadProgress);
-  const loadExercises = useStats((s) => s.loadExercises);
-  const bodyWeights = useStats((s) => s.bodyWeights);
-  const loadBodyWeights = useStats((s) => s.loadBodyWeights);
+  const { data, error, retry: retryProgress } = useProgress(id, variant);
+  const { data: exercises } = useStatsExercises();
+  const { data: bodyWeights } = useBodyWeights();
   const [metricId, setMetricId] = useState<MetricId | null>(null);
   const [all, setAll] = useState(false);
-
-  useEffect(() => {
-    void loadProgress(id, variant);
-  }, [id, variant, loadProgress]);
-  useEffect(() => {
-    void loadExercises();
-  }, [loadExercises]);
-  useEffect(() => {
-    void loadBodyWeights();
-  }, [loadBodyWeights]);
 
   const variants = useMemo(() => (exercises ?? []).filter((x) => x.exercise_id === id), [exercises, id]);
   const current = variant === null ? null : variants.find((v) => v.variant_key === variant);
@@ -115,7 +100,7 @@ export function ExerciseProgress({ id, variant, from }: { id: string; variant: s
       </button>
       {error && !data && (
         <p className="error" role="alert">
-          {error} <button className="link" onClick={() => void loadProgress(id, variant)}>Retry</button>
+          {error} <button className="link" onClick={retryProgress}>Retry</button>
         </p>
       )}
       {!data && !error && <p className="dim empty">Loading…</p>}
@@ -162,7 +147,7 @@ export function ExerciseProgress({ id, variant, from }: { id: string; variant: s
                   <p className="dim">No data for this metric.</p>
                 ) : (
                   <LineChart
-                    key={`${metric?.id}|${key}`}
+                    key={`${metric?.id}|${id}|${variant}`}
                     points={series}
                     zeroBased={metric?.zeroBased ?? false}
                     tickUnit={axisUnit(quantity, maxValue)}

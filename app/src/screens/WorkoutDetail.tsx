@@ -1,34 +1,26 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
-import type { Workout } from "../api/types";
 import { Confirm } from "../components/Sheet";
 import { ExternalLink } from "../components/ExternalLink";
 import { directionsUrl } from "../lib/gyms";
+import { workoutChanged } from "../lib/invalidate";
+import { useWorkoutDetail } from "../lib/queries";
 import { formatDate, formatDuration, formatSet, formatTime, plural } from "../lib/format";
 import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
 import { errMsg, useAuth } from "../stores/auth";
-import { useHistory } from "../stores/history";
 
 export function WorkoutDetail({ id }: { id: string }) {
   const unit = useAuth((s) => s.user?.unit_system ?? "metric");
-  const reloadHistory = useHistory((s) => s.reload);
-  const [w, setW] = useState<Workout | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { workout: w, error } = useWorkoutDetail(id);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setW(null);
-    setError(null);
-    api.getWorkout(id).then(setW, (e) => setError(errMsg(e)));
-  }, [id]);
 
   async function remove() {
     setBusy(true);
     try {
       await api.deleteWorkout(id);
-      void reloadHistory();
+      void workoutChanged();
       navigate(paths.home);
     } catch (e) {
       toastError(`Couldn't delete workout: ${errMsg(e)}`);

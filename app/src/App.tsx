@@ -11,8 +11,6 @@ import { Stats } from "./screens/Stats";
 import { WorkoutDetail } from "./screens/WorkoutDetail";
 import { You } from "./screens/You";
 import { useAuth } from "./stores/auth";
-import { useHistory } from "./stores/history";
-import { useStats } from "./stores/stats";
 
 export default function App() {
   const { status, error, init } = useAuth();
@@ -21,14 +19,6 @@ export default function App() {
   useEffect(() => {
     void init();
   }, [init]);
-
-  // Drop cached history when signed out so another user never sees it.
-  useEffect(() => {
-    if (status === "signed-out") {
-      useHistory.getState().reset();
-      useStats.getState().reset();
-    }
-  }, [status]);
 
   let content;
   if (status === "loading") content = <main className="screen center"><p className="dim">Loading…</p></main>;

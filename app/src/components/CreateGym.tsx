@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
 import type { Gym, NewGym } from "../api/types";
 import { gymLine } from "../lib/gyms";
+import { gymChanged } from "../lib/invalidate";
 import { errMsg } from "../stores/auth";
 
 export function CreateGym({ initialName, onCreated }: { initialName: string; onCreated: (g: Gym) => void }) {
@@ -21,7 +22,9 @@ export function CreateGym({ initialName, onCreated }: { initialName: string; onC
     setBusy(true);
     setError(null);
     try {
-      onCreated(await api.createGym(body));
+      const gym = await api.createGym(body);
+      void gymChanged();
+      onCreated(gym);
     } catch (e) {
       setBusy(false);
       if (e instanceof ApiError && e.status === 409) {

@@ -1,14 +1,14 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { changeOver, sinceDays, todayIn, trailingAverage } from "../lib/bodyweight";
 import { formatDay } from "../lib/format";
 import { formatTick, formatValue } from "../lib/progress";
+import { deleteBodyWeight, logBodyWeight, useBodyWeights } from "../lib/queries";
 import { toastError } from "../lib/toast";
 import { displayToKg, kgToDisplay, weightLabel } from "../lib/units";
 import { useAuth } from "../stores/auth";
 import { errMsg } from "../stores/auth";
-import { useStats } from "../stores/stats";
 import { LineChart } from "./LineChart";
 import { Sheet } from "./Sheet";
 
@@ -23,14 +23,10 @@ export function BodyWeightCard() {
   const user = useAuth((s) => s.user);
   const unit = user?.unit_system ?? "metric";
   const timeZone = user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { bodyWeights, errors, loadBodyWeights, deleteBodyWeight } = useStats();
+  const { data: bodyWeights, error: loadError, retry } = useBodyWeights();
   const [open, setOpen] = useState(false);
   const [rangeId, setRangeId] = useState<(typeof RANGES)[number]["id"]>("3m");
   const range = RANGES.find((r) => r.id === rangeId) ?? RANGES[0];
-
-  useEffect(() => {
-    void loadBodyWeights();
-  }, [loadBodyWeights]);
 
   const today = todayIn(timeZone);
   const points = useMemo(
@@ -50,12 +46,12 @@ export function BodyWeightCard() {
         <button className="btn" onClick={() => setOpen(true)}>Log weight</button>
       </div>
 
-      {errors.bodyWeights && !bodyWeights && (
+      {loadError && !bodyWeights && (
         <p className="error" role="alert">
-          {errors.bodyWeights} <button className="link" onClick={() => void loadBodyWeights()}>Retry</button>
+          {loadError} <button className="link" onClick={retry}>Retry</button>
         </p>
       )}
-      {!bodyWeights && !errors.bodyWeights && <p className="dim">Loading…</p>}
+      {!bodyWeights && !loadError && <p className="dim">Loading…</p>}
       {bodyWeights && !latest && <p className="dim">Log your weight now and then to see it next to your strength.</p>}
 
       {bodyWeights && latest && (
@@ -119,7 +115,6 @@ function LogSheet({
   existing: { date: string; weight_kg: number }[];
   onClose: () => void;
 }) {
-  const logBodyWeight = useStats((s) => s.logBodyWeight);
   const [date, setDate] = useState(today);
   const prefill = (d: string) => {
     const e = existing.find((w) => w.date === d) ?? (d === today ? existing.at(-1) : undefined);

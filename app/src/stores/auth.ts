@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { api, ApiError, setSessionExpiredHandler, storeLogin } from "../api/client";
 import { clearSession, loadSession } from "../api/tokenStorage";
 import { disableGoogleAutoSelect } from "../lib/google";
+import { clearAll } from "../lib/invalidate";
 import type { LoginResponse, Me, MeUpdate } from "../api/types";
 
 type Status = "loading" | "signed-out" | "signed-in" | "unreachable";
@@ -38,6 +39,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   completeLogin: async (r) => {
+    clearAll(); // whoever was here before, none of their data is shown to this account
     storeLogin(r);
     set({ user: await api.me(), status: "signed-in", error: null });
   },
@@ -49,6 +51,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   logout: () => {
     disableGoogleAutoSelect();
     clearSession();
+    clearAll();
     set({ status: "signed-out", user: null });
   },
 

@@ -1,8 +1,7 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../api/client";
-import type { Exercise, Tag, TagCategory } from "../api/types";
-import { errMsg } from "../stores/auth";
+import type { Exercise, TagCategory } from "../api/types";
+import { useExerciseSearch, useTags } from "../lib/queries";
 import { useWorkout } from "../stores/workout";
 import { Sheet } from "./Sheet";
 
@@ -22,17 +21,13 @@ const CATEGORY_LABEL: Record<TagCategory, string> = {
 };
 const CATEGORY_ORDER: TagCategory[] = ["equipment", "grip", "angle", "stance", "other"];
 
-let tagCache: Tag[] | null = null;
-
 export function ExercisePicker({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const addExercise = useWorkout((s) => s.addExercise);
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<Exercise[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { results, searching, error } = useExerciseSearch(q, open);
+  // Result rows name the suggested tags, so these load as soon as the sheet opens (and stay cached).
+  const { tags, failed: tagsFailed } = useTags(open);
   const [chosen, setChosen] = useState<Exercise | null>(null);
-  const [tags, setTags] = useState<Tag[] | null>(tagCache);
-  const [tagsFailed, setTagsFailed] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
 
@@ -42,45 +37,8 @@ export function ExercisePicker({ open, onOpenChange }: { open: boolean; onOpenCh
       setQ("");
       setChosen(null);
       setSelected(new Set());
-      setError(null);
     }
   }, [open]);
-
-  // Debounced search.
-  useEffect(() => {
-    if (!open) return;
-    let stale = false;
-    setSearching(true);
-    const t = setTimeout(async () => {
-      try {
-        const r = await api.searchExercises(q.trim());
-        if (stale) return;
-        setResults(r);
-        setError(null);
-      } catch (e) {
-        if (!stale) setError(errMsg(e));
-      } finally {
-        if (!stale) setSearching(false);
-      }
-    }, q ? 250 : 0);
-    return () => {
-      stale = true;
-      clearTimeout(t);
-    };
-  }, [q, open]);
-
-  // Tags load when the sheet first opens: result rows name the suggested ones.
-  useEffect(() => {
-    if (!open || tags) return;
-    setTagsFailed(false);
-    api.tags().then(
-      (t) => {
-        tagCache = t;
-        setTags(t);
-      },
-      () => setTagsFailed(true),
-    );
-  }, [open, tags]);
 
   const tagName = useMemo(() => new Map((tags ?? []).map((t) => [t.id, t.name])), [tags]);
 

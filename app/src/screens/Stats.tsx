@@ -1,19 +1,14 @@
-import { useEffect } from "react";
 import { BodyWeightCard } from "../components/BodyWeightCard";
 import { Heatmap } from "../components/Heatmap";
 import { formatDay } from "../lib/format";
 import { navigate, paths } from "../router";
 import { useAuth } from "../stores/auth";
-import { useStats } from "../stores/stats";
+import { useConsistency, useStatsExercises } from "../lib/queries";
 
 export function Stats() {
   const unit = useAuth((s) => s.user?.unit_system ?? "metric");
-  const { consistency, exercises, errors, loadConsistency, loadExercises } = useStats();
-
-  useEffect(() => {
-    void loadConsistency();
-    void loadExercises();
-  }, [loadConsistency, loadExercises]);
+  const { data: consistency, error: consistencyError, retry: retryConsistency } = useConsistency();
+  const { data: exercises, error: exercisesError, retry: retryExercises } = useStatsExercises();
 
   const t = consistency?.totals;
   const summary = consistency
@@ -32,12 +27,12 @@ export function Stats() {
         {consistency && <p className="dim">{formatDay(consistency.from)} to {formatDay(consistency.to)}</p>}
       </header>
 
-      {errors.consistency && (
+      {consistencyError && (
         <p className="error" role="alert">
-          {errors.consistency} <button className="link" onClick={() => void loadConsistency()}>Retry</button>
+          {consistencyError} <button className="link" onClick={retryConsistency}>Retry</button>
         </p>
       )}
-      {!consistency && !errors.consistency && <p className="dim empty">Loading…</p>}
+      {!consistency && !consistencyError && <p className="dim empty">Loading…</p>}
 
       {consistency && (
         <>
@@ -61,9 +56,9 @@ export function Stats() {
 
       <section className="stack" aria-labelledby="progress-h">
         <h2 id="progress-h">Exercise progress</h2>
-        {errors.exercises && (
+        {exercisesError && (
           <p className="error" role="alert">
-            {errors.exercises} <button className="link" onClick={() => void loadExercises()}>Retry</button>
+            {exercisesError} <button className="link" onClick={retryExercises}>Retry</button>
           </p>
         )}
         {exercises && exercises.length === 0 && (

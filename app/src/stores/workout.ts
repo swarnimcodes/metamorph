@@ -3,6 +3,9 @@ import { api } from "../api/client";
 import type {
   Exercise, ExerciseKind, Gym, LastSession, SetInput, Workout, WorkoutExercise, WorkoutSet,
 } from "../api/types";
+import { workoutChanged } from "../lib/invalidate";
+import { queryClient } from "../lib/queryClient";
+import { keys } from "../lib/queryKeys";
 import { toastError } from "../lib/toast";
 import { errMsg } from "./auth";
 
@@ -39,6 +42,13 @@ interface WorkoutState {
   discard: () => Promise<boolean>;
 }
 
+/**
+ * Whatever just happened to this workout, whether it worked or not, make cached history, stats and
+ * "last time" hints re-check the server. After a failure that is what repairs any drift; after a
+ * success it is what updates the counts and charts. Only what is on screen refetches now.
+ */
+const changed = () => void workoutChanged();
+
 const hintKey = (we: WorkoutExercise) => `${we.exercise_id}|${we.variant_key}`;
 const setSeq = new Map<string, number>();
 
@@ -74,7 +84,13 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     if (key in get().hints) return;
     set((s) => ({ hints: { ...s.hints, [key]: null } })); // mark in-flight; stays null on failure
     try {
-      const hint = await api.lastSession(we.exercise_id, we.variant_key);
+      // Kept until a workout change marks it stale (see invalidate.ts): a hint is "your previous session
+      // of this lift", which only another workout can change, so it needs no timer.
+      const hint = await queryClient.fetchQuery({
+        queryKey: keys.lastSession.one(we.exercise_id, we.variant_key),
+        queryFn: () => api.lastSession(we.exercise_id, we.variant_key),
+        staleTime: Infinity,
+      });
       set((s) => ({ hints: { ...s.hints, [key]: hint } }));
     } catch {
       /* 404 = never done; any other failure just means no hint */
@@ -91,6 +107,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       patchWorkout(set, get, { title: prev });
       toastError(`Couldn't rename: ${errMsg(e)}`);
+    } finally {
+      changed();
     }
   },
 
@@ -105,6 +123,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       patchWorkout(set, get, prev);
       toastError(`Couldn't set gym: ${errMsg(e)}`);
+    } finally {
+      changed();
     }
   },
 
@@ -120,6 +140,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       toastError(`Couldn't add exercise: ${errMsg(e)}`);
       return false;
+    } finally {
+      changed();
     }
   },
 
@@ -132,6 +154,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       toastError(`Couldn't remove exercise: ${errMsg(e)}`);
       void get().load(w.id);
+    } finally {
+      changed();
     }
   },
 
@@ -151,6 +175,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
       set((s) => ({ workout: s.workout && mapSets(s.workout, we.id, (sets) => [...sets, created]) }));
     } catch (e) {
       toastError(`Couldn't add set: ${errMsg(e)}`);
+    } finally {
+      changed();
     }
   },
 
@@ -169,6 +195,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       if (setSeq.get(setId) === seq) replace(prev);
       toastError(`Couldn't save set: ${errMsg(e)}`);
+    } finally {
+      changed();
     }
   },
 
@@ -188,6 +216,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
           mapSets(s.workout, weId, (sets) => [...sets.slice(0, index), prev, ...sets.slice(index)]),
       }));
       toastError(`Couldn't delete set: ${errMsg(e)}`);
+    } finally {
+      changed();
     }
   },
 
@@ -200,6 +230,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       toastError(`Couldn't finish workout: ${errMsg(e)}`);
       return false;
+    } finally {
+      changed();
     }
   },
 
@@ -212,6 +244,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       toastError(`Couldn't discard workout: ${errMsg(e)}`);
       return false;
+    } finally {
+      changed();
     }
   },
 }));
