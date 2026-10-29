@@ -322,7 +322,8 @@ async fn create(
     AuthUser(user_id): AuthUser,
     AppJson(body): AppJson<CreateWorkout>,
 ) -> AppResult<(StatusCode, Json<WorkoutOut>)> {
-    // No gym given: start where the caller last trained.
+    // No gym given: start where the caller last trained. The join means a gym-less workout never
+    // matches, so one in between does not reset it.
     let id = sqlx::query_scalar!(
         r#"insert into workouts (user_id, title, gym_id, notes, started_at)
            values ($1, $2,

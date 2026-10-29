@@ -615,7 +615,7 @@ async fn gym_duplicate_guard_returns_409_and_force_overrides(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn new_workouts_start_at_the_gym_of_the_last_workout(pool: PgPool) {
-    let app = app(pool, true);
+    let app = app(pool.clone(), true);
     let (a, _) = login(&app, "gymrat").await;
     let (_, alpha) = create_gym(&app, &a, json!({ "name": "Alpha Gym", "city": "Pune" })).await;
     let (_, beta) = create_gym(&app, &a, json!({ "name": "Beta Fitness", "city": "Pune" })).await;
@@ -636,6 +636,13 @@ async fn new_workouts_start_at_the_gym_of_the_last_workout(pool: PgPool) {
     assert_eq!(after["gym"]["name"], "Beta Fitness");
     let (_, chosen) = post(&app, "/workouts", &a, json!({ "gym_id": alpha["id"], "started_at": "2026-01-05T09:00:00Z" })).await;
     assert_eq!(chosen["gym"]["name"], "Alpha Gym");
+
+    // A workout logged without a gym in between does not reset the default.
+    let (_, bare) = post(&app, "/workouts", &a, json!({ "gym_id": null, "started_at": "2026-01-05T12:00:00Z" })).await;
+    assert_eq!(bare["gym"]["name"], "Alpha Gym", "inherits, so it is not bare: {bare}");
+    sqlx::query("update workouts set gym_id = null where id = $1::uuid").bind(bare["id"].as_str().unwrap()).execute(&pool).await.unwrap();
+    let (_, after_bare) = post(&app, "/workouts", &a, json!({ "started_at": "2026-01-05T13:00:00Z" })).await;
+    assert_eq!(after_bare["gym"]["name"], "Alpha Gym", "skips the gym-less workout: {after_bare}");
 
     // The gym on a workout carries what a Directions button needs.
     let (_, cult) = get(&app, "/gyms?q=kalyani", &a).await;
