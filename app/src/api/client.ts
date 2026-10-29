@@ -1,6 +1,6 @@
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SavedGym, SetInput, Tag, UsernameAvailability, Workout,
+  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -174,7 +174,6 @@ export const api = {
     request<LastSession>("GET", `/exercises/${exerciseId}/last`, { query: { variant_key: variantKey } }),
   searchGyms: (q: string, limit = 20) => request<Gym[]>("GET", "/gyms", { query: { q, limit } }),
   createGym: (body: NewGym) => request<Gym>("POST", "/gyms", { body }),
-  myGyms: () => request<SavedGym[]>("GET", "/me/gyms"),
   consistency: (weeks?: number) => request<Consistency>("GET", "/stats/consistency", { query: { weeks } }),
   statsExercises: () => request<StatsExercise[]>("GET", "/stats/exercises"),
   /** variantKey: undefined = all variations, "" = untagged only. */
@@ -183,5 +182,4 @@ export const api = {
       query: variantKey === undefined ? undefined : { variant_key: variantKey },
       keepEmpty: true,
     }),
-  setDefaultGym: (id: string) => request<void>("PUT", `/me/gyms/${id}/default`),
 };

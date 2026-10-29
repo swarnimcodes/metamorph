@@ -6,6 +6,7 @@ import { ActiveWorkout } from "./screens/ActiveWorkout";
 import { Home } from "./screens/Home";
 import { Login } from "./screens/Login";
 import { ExerciseProgress } from "./screens/ExerciseProgress";
+import { Social } from "./screens/Social";
 import { Stats } from "./screens/Stats";
 import { WorkoutDetail } from "./screens/WorkoutDetail";
 import { You } from "./screens/You";
@@ -46,6 +47,7 @@ export default function App() {
   else if (route.name === "stats") content = <Stats />;
   else if (route.name === "exercise") content = <ExerciseProgress id={route.id} variant={route.variant} from={route.from} />;
   else if (route.name === "you") content = <You />;
+  else if (route.name === "social") content = <Social />;
   else content = <Home />;
 
   // Main navigation stays pinned on every signed-in screen except the active workout,
@@ -56,9 +58,11 @@ export default function App() {
       ? "train"
       : route.name === "stats" || route.name === "exercise"
         ? "progress"
-        : route.name === "you"
-          ? "you"
-          : null;
+        : route.name === "social"
+          ? "social"
+          : route.name === "you"
+            ? "you"
+            : null;
 
   return (
     <>

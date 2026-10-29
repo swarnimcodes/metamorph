@@ -38,6 +38,7 @@ describe("tab routes", () => {
     expect(parseRoute("#/")).toEqual({ name: "home" });
     expect(parseRoute("#/stats")).toEqual({ name: "stats" });
     expect(parseRoute(`#${paths.you}`)).toEqual({ name: "you" });
+    expect(parseRoute(`#${paths.social}`)).toEqual({ name: "social" });
     expect(parseRoute("#/settings")).toEqual({ name: "you" });
   });
 });

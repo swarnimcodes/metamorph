@@ -23,9 +23,8 @@ export function Home() {
   async function start() {
     setStarting(true);
     try {
-      // A failed default-gym lookup shouldn't block starting a workout.
-      const gym_id = await api.myGyms().then((g) => g.find((x) => x.is_default)?.id, () => undefined);
-      const w = await api.createWorkout(gym_id ? { gym_id } : {});
+      // The server starts the workout at the gym of your last one.
+      const w = await api.createWorkout({});
       navigate(paths.workout(w.id));
     } catch (e) {
       toastError(`Couldn't start workout: ${errMsg(e)}`);

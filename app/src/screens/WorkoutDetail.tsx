@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Workout } from "../api/types";
 import { Confirm } from "../components/Sheet";
+import { directionsUrl } from "../lib/gyms";
 import { formatDate, formatDuration, formatSet, formatTime, plural } from "../lib/format";
 import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
@@ -50,6 +51,13 @@ export function WorkoutDetail({ id }: { id: string }) {
               {w.ended_at && ` · ${formatDuration(w.started_at, w.ended_at)}`}
               {w.gym && ` · ${w.gym.name}`}
             </p>
+            {w.gym && (
+              <p>
+                <a className="chip action" href={directionsUrl(w.gym)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${w.gym.name}`}>
+                  Directions
+                </a>
+              </p>
+            )}
           </header>
 
           {w.exercises.length === 0 && <p className="dim empty">Nothing was logged.</p>}

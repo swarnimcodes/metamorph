@@ -84,7 +84,11 @@ export interface WorkoutSet {
 export interface WorkoutGym {
   id: string;
   name: string;
+  area: string | null;
   city: string | null;
+  lat: number | null;
+  lng: number | null;
+  maps_url: string | null;
 }
 
 export interface WorkoutExercise {
@@ -147,20 +151,22 @@ export interface Gym {
   id: string;
   name: string;
   chain: string | null;
+  area: string | null;
   address: string | null;
   city: string | null;
+  lat: number | null;
+  lng: number | null;
+  maps_url: string | null;
   verified: boolean;
-}
-
-export interface SavedGym extends Gym {
-  is_default: boolean;
 }
 
 export interface NewGym {
   name: string;
   chain?: string;
+  area?: string;
   address?: string;
   city?: string;
+  maps_url?: string;
   force?: boolean;
 }
 

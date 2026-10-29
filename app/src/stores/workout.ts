@@ -98,7 +98,7 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     const w = get().workout;
     if (!w) return;
     const prev = { gym_id: w.gym_id, gym: w.gym };
-    set({ workout: { ...w, gym_id: gym.id, gym: { id: gym.id, name: gym.name, city: gym.city } } });
+    set({ workout: { ...w, gym_id: gym.id, gym: { id: gym.id, name: gym.name, area: gym.area, city: gym.city, lat: gym.lat, lng: gym.lng, maps_url: gym.maps_url } } });
     try {
       const server = await api.updateWorkout(w.id, { gym_id: gym.id });
       patchWorkout(set, get, { gym_id: server.gym_id, gym: server.gym });

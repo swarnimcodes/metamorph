@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ExercisePicker } from "../components/ExercisePicker";
 import { GymPicker } from "../components/GymPicker";
+import { directionsUrl } from "../lib/gyms";
 import { SetRow } from "../components/SetRow";
 import { Confirm } from "../components/Sheet";
 import { formatElapsed, formatSet } from "../lib/format";
@@ -69,9 +70,16 @@ export function ActiveWorkout({ id }: { id: string }) {
           <span className="timer" role="timer" aria-label="Elapsed time">{formatElapsed(workout.started_at, now)}</span>
         </div>
         <TitleField key={workout.id} value={workout.title ?? ""} onCommit={(t) => void rename(t)} />
-        <button className="chip action" onClick={() => setPickGym(true)}>
-          {workout.gym?.name ?? "+ Add gym"}
-        </button>
+        <div className="gym-line">
+          <button className="chip action" onClick={() => setPickGym(true)}>
+            {workout.gym?.name ?? "+ Add gym"}
+          </button>
+          {workout.gym && (
+            <a className="chip action" href={directionsUrl(workout.gym)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${workout.gym.name}`}>
+              Directions
+            </a>
+          )}
+        </div>
       </header>
 
       <div className="stack-lg">
