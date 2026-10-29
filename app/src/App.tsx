@@ -6,9 +6,9 @@ import { ActiveWorkout } from "./screens/ActiveWorkout";
 import { Home } from "./screens/Home";
 import { Login } from "./screens/Login";
 import { ExerciseProgress } from "./screens/ExerciseProgress";
-import { Settings } from "./screens/Settings";
 import { Stats } from "./screens/Stats";
 import { WorkoutDetail } from "./screens/WorkoutDetail";
+import { You } from "./screens/You";
 import { useAuth } from "./stores/auth";
 import { useHistory } from "./stores/history";
 import { useStats } from "./stores/stats";
@@ -45,14 +45,20 @@ export default function App() {
   else if (route.name === "detail") content = <WorkoutDetail id={route.id} />;
   else if (route.name === "stats") content = <Stats />;
   else if (route.name === "exercise") content = <ExerciseProgress id={route.id} variant={route.variant} from={route.from} />;
-  else if (route.name === "settings") content = <Settings />;
+  else if (route.name === "you") content = <You />;
   else content = <Home />;
 
   // Main navigation stays pinned on every signed-in screen except the active workout,
   // which has its own sticky Finish bar and should not be left by a stray tap.
   const showTabs = status === "signed-in" && route.name !== "workout";
   const tab: Tab | null =
-    route.name === "home" || route.name === "detail" ? "workouts" : route.name === "stats" || route.name === "exercise" ? "stats" : null;
+    route.name === "home" || route.name === "detail"
+      ? "train"
+      : route.name === "stats" || route.name === "exercise"
+        ? "progress"
+        : route.name === "you"
+          ? "you"
+          : null;
 
   return (
     <>

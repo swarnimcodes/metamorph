@@ -5,14 +5,14 @@ export type Route =
   | { name: "home" }
   | { name: "workout"; id: string }
   | { name: "detail"; id: string }
-  | { name: "settings" }
+  | { name: "you" }
   | { name: "stats" }
   | {
       name: "exercise";
       id: string;
       /** null = all variations, "" = untagged */
       variant: string | null;
-      /** Where "back" returns to when the screen was opened from elsewhere (a workout); null = Stats. */
+      /** Where "back" returns to when the screen was opened from elsewhere (a workout); null = Progress. */
       from: string | null;
     };
 
@@ -35,7 +35,7 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === "stats") return { name: "stats" };
   if (parts[0] === "workout" && parts[1]) return { name: "workout", id: parts[1] };
   if (parts[0] === "history" && parts[1]) return { name: "detail", id: parts[1] };
-  if (parts[0] === "settings") return { name: "settings" };
+  if (parts[0] === "you" || parts[0] === "settings") return { name: "you" };
   return { name: "home" };
 }
 
@@ -58,7 +58,7 @@ export function navigate(path: string, opts: { replace?: boolean } = {}): void {
 
 export const paths = {
   home: "/",
-  settings: "/settings",
+  you: "/you",
   stats: "/stats",
   exercise: (id: string, variant: string | null, from?: string | null) => {
     const q = new URLSearchParams();

@@ -32,3 +32,12 @@ describe("exercise progress routes", () => {
     expect(parseRoute(`#/stats/exercise/${EXERCISE}?${new URLSearchParams({ from: "/stats" })}`)).toMatchObject({ from: "/stats" });
   });
 });
+
+describe("tab routes", () => {
+  it("resolves each tab, with the old settings link still landing on You", () => {
+    expect(parseRoute("#/")).toEqual({ name: "home" });
+    expect(parseRoute("#/stats")).toEqual({ name: "stats" });
+    expect(parseRoute(`#${paths.you}`)).toEqual({ name: "you" });
+    expect(parseRoute("#/settings")).toEqual({ name: "you" });
+  });
+});

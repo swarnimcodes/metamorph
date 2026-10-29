@@ -9,7 +9,6 @@ import { useNow } from "../lib/useNow";
 
 export function Home() {
   const user = useAuth((s) => s.user);
-  const logout = useAuth((s) => s.logout);
   const { items, loading, loaded, hasMore, error, reload, loadMore } = useHistory();
   const [starting, setStarting] = useState(false);
 
@@ -38,12 +37,8 @@ export function Home() {
     <main className="screen">
       <header className="top">
         <div>
-          <h1>History</h1>
+          <h1>Train</h1>
           <p className="dim">{user?.display_name}</p>
-        </div>
-        <div className="top-actions">
-          <button className="btn quiet" onClick={() => navigate(paths.settings)}>Settings</button>
-          <button className="btn quiet" onClick={logout}>Log out</button>
         </div>
       </header>
 

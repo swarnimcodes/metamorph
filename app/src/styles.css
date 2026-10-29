@@ -252,7 +252,6 @@ input::placeholder { color: #6f757e; }
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
-.top-actions { display: flex; gap: var(--space-2); }
 
 .suggested {
   color: var(--accent);
@@ -342,7 +341,7 @@ body:has(.tabbar) .screen { padding-bottom: calc(var(--tabbar-h) + var(--space-5
   background: var(--bg); border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom);
 }
-.tabbar-inner { max-width: var(--column); margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; }
+.tabbar-inner { max-width: var(--column); margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); }
 .tab {
   min-height: var(--tabbar-h); display: flex; align-items: center; justify-content: center;
   color: var(--text-dim); text-decoration: none;
@@ -455,3 +454,5 @@ body:has(.tabbar) .screen { padding-bottom: calc(var(--tabbar-h) + var(--space-5
 .bw-recent li { display: flex; align-items: center; gap: var(--space-3); }
 .bw-recent li > span:first-child { flex: 1; color: var(--text-dim); }
 .bw-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.gym-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; }
+.small-btn { font-size: 0.8125rem; min-height: 36px; }

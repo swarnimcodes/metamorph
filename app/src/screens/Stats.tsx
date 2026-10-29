@@ -28,7 +28,7 @@ export function Stats() {
   return (
     <main className="screen">
       <header className="stack-sm">
-        <h1>Stats</h1>
+        <h1>Progress</h1>
         {consistency && <p className="dim">{formatDay(consistency.from)} to {formatDay(consistency.to)}</p>}
       </header>
 

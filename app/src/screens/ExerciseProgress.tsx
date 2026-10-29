@@ -111,7 +111,7 @@ export function ExerciseProgress({ id, variant, from }: { id: string; variant: s
   return (
     <main className="screen">
       <button className="btn quiet back" onClick={() => navigate(from ?? paths.stats)}>
-        {from?.startsWith("/history/") ? "‹ Workout" : "‹ Stats"}
+        {from?.startsWith("/history/") ? "‹ Workout" : "‹ Progress"}
       </button>
       {error && !data && (
         <p className="error" role="alert">
