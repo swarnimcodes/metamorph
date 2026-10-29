@@ -41,6 +41,7 @@ export function Social() {
             ))}
           </ul>
         )}
+        {loading && found.length === 0 && <p className="dim empty" role="status">Loading gyms…</p>}
         {!loading && found.length === 0 && <p className="dim empty">{q.trim() ? "No gyms match." : "No gyms yet."}</p>}
       </section>
 

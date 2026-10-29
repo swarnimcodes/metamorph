@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { paths } from "../router";
 
 export type Tab = "train" | "progress" | "social" | "you";
@@ -22,7 +22,11 @@ const TABS: { id: Tab; label: string; href: string; glyph: ReactNode }[] = [
 export function TabBar({ current }: { current: Tab | null }) {
   return (
     <nav className="tabbar" aria-label="Main">
-      <div className="tabbar-inner">
+      <div
+        className="tabbar-inner"
+        data-none={current === null || undefined}
+        style={{ "--i": Math.max(0, TABS.findIndex((t) => t.id === current)) } as CSSProperties}
+      >
         {TABS.map((t) => (
           <a
             key={t.id}

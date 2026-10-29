@@ -60,6 +60,7 @@ export function GymPicker({ open, onOpenChange }: { open: boolean; onOpenChange:
             </ul>
           )}
 
+          {loading && found.length === 0 && <p className="dim empty" role="status">Loading gyms…</p>}
           {!loading && found.length === 0 && <p className="dim empty">No gyms found.</p>}
           <button className="btn" onClick={() => setView("create")}>Create new gym</button>
         </div>
