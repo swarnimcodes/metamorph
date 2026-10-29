@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ExercisePicker } from "../components/ExercisePicker";
+import { ExternalLink } from "../components/ExternalLink";
 import { GymPicker } from "../components/GymPicker";
 import { directionsUrl } from "../lib/gyms";
 import { SetRow } from "../components/SetRow";
@@ -75,9 +76,9 @@ export function ActiveWorkout({ id }: { id: string }) {
             {workout.gym?.name ?? "+ Add gym"}
           </button>
           {workout.gym && (
-            <a className="chip action" href={directionsUrl(workout.gym)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${workout.gym.name}`}>
+            <ExternalLink className="chip action" href={directionsUrl(workout.gym)} aria-label={`Directions to ${workout.gym.name}`}>
               Directions
-            </a>
+            </ExternalLink>
           )}
         </div>
       </header>

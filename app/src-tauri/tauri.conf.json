@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "app",
+  "productName": "Metamorph",
   "version": "0.1.0",
   "identifier": "dev.swarnim.metamorph",
   "build": {
@@ -12,9 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "app",
+        "title": "Metamorph",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "useHttpsScheme": true
       }
     ],
     "security": {

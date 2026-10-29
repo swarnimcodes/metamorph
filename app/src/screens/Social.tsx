@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExternalLink } from "../components/ExternalLink";
 import { CreateGym } from "../components/CreateGym";
 import { Sheet } from "../components/Sheet";
 import { directionsUrl, gymLine } from "../lib/gyms";
@@ -33,9 +34,9 @@ export function Social() {
                   <span className="card-title">{g.name}</span>
                   <span className="dim small">{gymLine(g) || "—"}</span>
                 </span>
-                <a className="btn small-btn" href={directionsUrl(g)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${g.name}`}>
+                <ExternalLink className="btn small-btn" href={directionsUrl(g)} aria-label={`Directions to ${g.name}`}>
                   Directions
-                </a>
+                </ExternalLink>
               </li>
             ))}
           </ul>

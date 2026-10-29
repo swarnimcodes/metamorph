@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Workout } from "../api/types";
 import { Confirm } from "../components/Sheet";
+import { ExternalLink } from "../components/ExternalLink";
 import { directionsUrl } from "../lib/gyms";
 import { formatDate, formatDuration, formatSet, formatTime, plural } from "../lib/format";
 import { toastError } from "../lib/toast";
@@ -53,9 +54,9 @@ export function WorkoutDetail({ id }: { id: string }) {
             </p>
             {w.gym && (
               <p>
-                <a className="chip action" href={directionsUrl(w.gym)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${w.gym.name}`}>
+                <ExternalLink className="chip action" href={directionsUrl(w.gym)} aria-label={`Directions to ${w.gym.name}`}>
                   Directions
-                </a>
+                </ExternalLink>
               </p>
             )}
           </header>

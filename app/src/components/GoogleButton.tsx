@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { errMsg } from "../stores/auth";
-import { GOOGLE_CLIENT_ID, renderGoogleButton } from "../lib/google";
+import { GOOGLE_CLIENT_ID, nativeGoogleSignIn, renderGoogleButton } from "../lib/google";
+import { isAndroidApp } from "../lib/platform";
 
 /** Google's "G" mark, unmodified colours. */
 function GoogleG() {
@@ -20,6 +21,43 @@ function GoogleG() {
  * loads no script) without a client id.
  */
 export function GoogleButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
+  if (GOOGLE_CLIENT_ID && isAndroidApp()) return <NativeGoogleButton onCredential={onCredential} disabled={disabled} />;
+  return <WebGoogleButton onCredential={onCredential} disabled={disabled} />;
+}
+
+/** The Android app has no GIS: our own face, and a tap opens the system account picker. */
+function NativeGoogleButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
+  const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+
+  async function pick() {
+    setPicking(true);
+    setError(null);
+    try {
+      onCredential(await nativeGoogleSignIn());
+    } catch (e) {
+      // Closing the account picker is not worth an error.
+      const msg = errMsg(e);
+      if (!/cancel/i.test(msg)) setError(msg);
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  return (
+    <div className="google-wrap" aria-busy={disabled || picking || undefined}>
+      <div className={disabled || picking ? "google-slot is-busy" : "google-slot"}>
+        <button type="button" className="google-face google-native" onClick={() => void pick()} disabled={disabled || picking}>
+          <GoogleG />
+          <span>Continue with Google</span>
+        </button>
+      </div>
+      {error && <p className="error" role="alert">{error}</p>}
+    </div>
+  );
+}
+
+function WebGoogleButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const cb = useRef(onCredential);
   cb.current = onCredential;

@@ -279,6 +279,7 @@ input::placeholder { color: #6f757e; }
 .google-slot:focus-within .google-face { outline: 2px solid var(--focus); outline-offset: 2px; }
 .google-overlay {
   position: absolute;
+.google-native { pointer-events: auto; width: 100%; font: inherit; font-weight: 500; cursor: pointer; }
   left: 0;
   right: 0;
   top: 2px;

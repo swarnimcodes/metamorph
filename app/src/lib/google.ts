@@ -23,6 +23,19 @@ function loadScript(): Promise<void> {
   return loading;
 }
 
+/**
+ * Android app: Credential Manager's account picker, via the native plugin. `GOOGLE_CLIENT_ID` is the
+ * *web* client id, so the ID token's audience is the one the server already accepts; the Android client
+ * (package + signing key) only lets Google verify the app. Resolves with the ID token.
+ */
+export async function nativeGoogleSignIn(): Promise<string> {
+  if (!GOOGLE_CLIENT_ID) throw new Error("Google sign-in isn't configured");
+  const { signIn } = await import("@choochmeque/tauri-plugin-google-auth-api");
+  const tokens = await signIn({ clientId: GOOGLE_CLIENT_ID, scopes: ["openid", "email", "profile"], flowType: "native" });
+  if (!tokens.idToken) throw new Error("Google didn't return an ID token");
+  return tokens.idToken;
+}
+
 let onCredential: (idToken: string) => void = () => {};
 let initialised = false;
 
