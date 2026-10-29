@@ -75,7 +75,8 @@ export interface WorkoutSet {
   reps: number | null;
   duration_s: number | null;
   distance_m: number | null;
-  rpe: number | null;
+  /** Reps in reserve, 0 to 5 (5 = five or more); null when not recorded. */
+  rir: number | null;
   note: string | null;
   completed_at: string | null;
 }
@@ -122,8 +123,13 @@ export interface WorkoutSummary {
 }
 
 export type SetInput = Partial<
-  Pick<WorkoutSet, "set_type" | "weight_kg" | "reps" | "duration_s" | "distance_m" | "rpe" | "note">
+  Pick<WorkoutSet, "set_type" | "weight_kg" | "reps" | "duration_s" | "distance_m" | "rir" | "note">
 >;
+
+export interface BodyWeightEntry {
+  date: string;
+  weight_kg: number;
+}
 
 export interface MeUpdate {
   display_name?: string;

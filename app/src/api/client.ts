@@ -1,6 +1,6 @@
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SavedGym, SetInput, Tag, UsernameAvailability, Workout,
+  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SavedGym, SetInput, Tag, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -163,6 +163,10 @@ export const api = {
     }),
   removeExercise: (weId: string) => request<void>("DELETE", `/workout-exercises/${weId}`),
   addSet: (weId: string, body: SetInput) => request<WorkoutSet>("POST", `/workout-exercises/${weId}/sets`, { body }),
+  bodyWeights: () => request<BodyWeightEntry[]>("GET", "/body-weights"),
+  logBodyWeight: (date: string, weightKg: number) =>
+    request<BodyWeightEntry>("PUT", `/body-weights/${date}`, { body: { weight_kg: weightKg } }),
+  deleteBodyWeight: (date: string) => request<void>("DELETE", `/body-weights/${date}`),
   updateSet: (id: string, body: SetInput) => request<WorkoutSet>("PATCH", `/sets/${id}`, { body }),
   deleteSet: (id: string) => request<void>("DELETE", `/sets/${id}`),
 

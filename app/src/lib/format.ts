@@ -40,6 +40,7 @@ export function formatSet(s: WorkoutSet, unit: UnitSystem): string {
   else if (s.reps !== null) parts.push(plural(s.reps, "rep"));
   if (s.distance_m !== null) parts.push(`${Number(s.distance_m)} m`);
   if (s.duration_s !== null) parts.push(`${s.duration_s} s`);
+  if (s.rir !== null) parts.push(`RIR ${s.rir >= 5 ? "5+" : s.rir}`);
   return parts.join(" · ");
 }
 

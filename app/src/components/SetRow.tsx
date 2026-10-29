@@ -15,6 +15,10 @@ const TYPES: { value: SetType; label: string; badge: string }[] = [
   { value: "failure", label: "Failure", badge: "F" },
 ];
 
+/** Reps in reserve choices; 5 stands for "five or more". */
+const RIR_OPTIONS = [0, 1, 2, 3, 4, 5];
+const rirText = (n: number) => (n >= 5 ? "5+" : String(n));
+
 interface Props {
   weId: string;
   set: WorkoutSet;
@@ -27,6 +31,8 @@ export function SetRow({ weId, set, index, kind }: Props) {
   const updateSet = useWorkout((s) => s.updateSet);
   const deleteSet = useWorkout((s) => s.deleteSet);
   const [typeOpen, setTypeOpen] = useState(false);
+  const [rirOpen, setRirOpen] = useState(false);
+  const tracksRir = kind === "weight_reps" || kind === "bodyweight_reps";
   const n = index + 1;
   const type = TYPES.find((t) => t.value === set.set_type) ?? TYPES[0];
   const save = (patch: SetInput) => void updateSet(weId, set.id, patch);
@@ -67,6 +73,17 @@ export function SetRow({ weId, set, index, kind }: Props) {
         {type.badge && <small>{n}</small>}
       </button>
       <div className="set-fields">{fields}</div>
+      {tracksRir && (
+        <button
+          className="rir-btn"
+          data-set={set.rir !== null}
+          onClick={() => setRirOpen(true)}
+          aria-label={set.rir === null ? `Set ${n} reps in reserve, not set` : `Set ${n} reps in reserve, ${rirText(set.rir)}`}
+        >
+          <small aria-hidden>RIR</small>
+          <span aria-hidden>{set.rir === null ? "–" : rirText(set.rir)}</span>
+        </button>
+      )}
       <button className="icon-btn" aria-label={`Delete set ${n}`} onClick={() => void deleteSet(weId, set.id)}>
         <span aria-hidden>✕</span>
       </button>
@@ -85,6 +102,25 @@ export function SetRow({ weId, set, index, kind }: Props) {
           {TYPES.map((t) => (
             <Toggle key={t.value} value={t.value} className="type-opt">
               {t.label}
+            </Toggle>
+          ))}
+        </ToggleGroup>
+      </Sheet>
+
+      <Sheet open={rirOpen} onOpenChange={setRirOpen} title={`Set ${n} reps in reserve`}>
+        <p className="dim small rir-hint">How many more reps could you have done? 0 means to failure. Tap the chosen one again to clear it.</p>
+        <ToggleGroup
+          className="rir-group"
+          value={set.rir === null ? [] : [String(set.rir)]}
+          onValueChange={(v) => {
+            save({ rir: v[0] === undefined ? null : Number(v[0]) });
+            setRirOpen(false);
+          }}
+          aria-label="Reps in reserve"
+        >
+          {RIR_OPTIONS.map((r) => (
+            <Toggle key={r} value={String(r)} className="type-opt" aria-label={r === 5 ? "5 or more" : String(r)}>
+              {rirText(r)}
             </Toggle>
           ))}
         </ToggleGroup>

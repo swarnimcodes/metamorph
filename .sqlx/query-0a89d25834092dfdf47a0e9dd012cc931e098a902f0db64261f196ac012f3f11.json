@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into body_weights (user_id, measured_on, weight_kg)\n           values ($1, $2, $3)\n           on conflict (user_id, measured_on) do update set weight_kg = excluded.weight_kg\n        returning to_char(measured_on, 'YYYY-MM-DD') as \"date!\", weight_kg",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "weight_kg",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "body_weights",
+            "name": "weight_kg"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Numeric"
+      ]
+    },
+    "nullable": [
+      null,
+      false
+    ]
+  },
+  "hash": "0a89d25834092dfdf47a0e9dd012cc931e098a902f0db64261f196ac012f3f11"
+}

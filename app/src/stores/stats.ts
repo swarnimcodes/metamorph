@@ -1,17 +1,22 @@
 import { create } from "zustand";
 import { api } from "../api/client";
-import type { Consistency, ExerciseProgress, StatsExercise } from "../api/types";
+import type { BodyWeightEntry, Consistency, ExerciseProgress, StatsExercise } from "../api/types";
 import { errMsg } from "./auth";
 
 /** In-memory cache only; screens re-fetch on mount and show the cached copy meanwhile. */
 interface StatsState {
   consistency: Consistency | null;
   exercises: StatsExercise[] | null;
+  /** Oldest first. */
+  bodyWeights: BodyWeightEntry[] | null;
   progress: Record<string, ExerciseProgress>;
   errors: Record<string, string>;
   loadConsistency: () => Promise<void>;
   loadExercises: () => Promise<void>;
   loadProgress: (exerciseId: string, variant: string | null) => Promise<void>;
+  loadBodyWeights: () => Promise<void>;
+  logBodyWeight: (date: string, kg: number) => Promise<void>;
+  deleteBodyWeight: (date: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -28,6 +33,7 @@ export const useStats = create<StatsState>((set) => {
   return {
     consistency: null,
     exercises: null,
+    bodyWeights: null,
     progress: {},
     errors: {},
 
@@ -59,6 +65,27 @@ export const useStats = create<StatsState>((set) => {
         fail(key, e);
       }
     },
-    reset: () => set({ consistency: null, exercises: null, progress: {}, errors: {} }),
+    loadBodyWeights: async () => {
+      try {
+        set({ bodyWeights: await api.bodyWeights() });
+        ok("bodyWeights");
+      } catch (e) {
+        fail("bodyWeights", e);
+      }
+    },
+    // Both throw on failure so the sheet that asked can stay open and show why.
+    logBodyWeight: async (date, kg) => {
+      const saved = await api.logBodyWeight(date, kg);
+      set((s) => ({
+        bodyWeights: [...(s.bodyWeights ?? []).filter((w) => w.date !== saved.date), saved].sort((a, b) =>
+          a.date < b.date ? -1 : 1,
+        ),
+      }));
+    },
+    deleteBodyWeight: async (date) => {
+      await api.deleteBodyWeight(date);
+      set((s) => ({ bodyWeights: (s.bodyWeights ?? []).filter((w) => w.date !== date) }));
+    },
+    reset: () => set({ consistency: null, exercises: null, bodyWeights: null, progress: {}, errors: {} }),
   };
 });

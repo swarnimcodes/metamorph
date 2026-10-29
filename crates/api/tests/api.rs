@@ -249,11 +249,12 @@ async fn workout_logging_flow(pool: PgPool) {
         &app,
         &format!("/workout-exercises/{we_id}/sets"),
         &token,
-        json!({ "weight_kg": 40.5, "reps": 8, "rpe": 8.5 }),
+        json!({ "weight_kg": 40.5, "reps": 8, "rir": 2 }),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "{set}");
     assert_eq!(set["weight_kg"], 40.5);
+    assert_eq!(set["rir"], 2);
     assert_eq!(set["set_type"], "working");
     assert_eq!(set["position"], 1);
     let set_id = set["id"].as_str().unwrap().to_string();
@@ -269,10 +270,21 @@ async fn workout_logging_flow(pool: PgPool) {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(edited["reps"], 9);
     assert_eq!(edited["weight_kg"], 40.5);
+    assert_eq!(edited["rir"], 2, "an edit that omits rir leaves it alone");
+
+    // Explicit null clears RIR; a new value replaces it.
+    let (status, cleared) =
+        call(&app, Method::PATCH, &format!("/sets/{set_id}"), Some(&token), Some(json!({ "rir": null }))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(cleared["rir"].is_null());
+    assert_eq!(cleared["reps"], 9);
+    let (_, reset) =
+        call(&app, Method::PATCH, &format!("/sets/{set_id}"), Some(&token), Some(json!({ "rir": 0 }))).await;
+    assert_eq!(reset["rir"], 0);
 
     // The database rejects out-of-range values, surfaced as 400.
     let (status, _) =
-        post(&app, &format!("/workout-exercises/{we_id}/sets"), &token, json!({ "rpe": 11 })).await;
+        post(&app, &format!("/workout-exercises/{we_id}/sets"), &token, json!({ "rir": 9 })).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 
     let (_, detail) = get(&app, &format!("/workouts/{wid}"), &token).await;

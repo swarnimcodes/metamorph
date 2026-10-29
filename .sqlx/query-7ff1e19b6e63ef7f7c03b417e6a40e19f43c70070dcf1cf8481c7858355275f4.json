@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select s.id, s.workout_exercise_id, s.position,\n                  s.set_type as \"set_type: SetType\",\n                  s.weight_kg, s.reps, s.duration_s, s.distance_m, s.rpe, s.note, s.completed_at\n             from sets s\n             join workout_exercises we on we.id = s.workout_exercise_id\n            where we.workout_id = $1 and we.deleted_at is null and s.deleted_at is null\n            order by s.position, s.created_at",
+  "query": "update sets s\n              set set_type = coalesce($3, s.set_type),\n                  weight_kg = coalesce($4, s.weight_kg),\n                  reps = coalesce($5, s.reps),\n                  duration_s = coalesce($6, s.duration_s),\n                  distance_m = coalesce($7, s.distance_m),\n                  rir = case when $8 then $9 else s.rir end,\n                  note = coalesce($10, s.note),\n                  completed_at = coalesce($11, s.completed_at)\n             from workout_exercises we, workouts w\n            where s.id = $1 and we.id = s.workout_exercise_id and w.id = we.workout_id\n              and w.user_id = $2 and w.deleted_at is null\n              and we.deleted_at is null and s.deleted_at is null\n        returning s.id, s.position, s.set_type as \"set_type: SetType\", s.weight_kg, s.reps,\n                  s.duration_s, s.distance_m, s.rir, s.note, s.completed_at",
   "describe": {
     "columns": [
       {
@@ -16,17 +16,6 @@
       },
       {
         "ordinal": 1,
-        "name": "workout_exercise_id",
-        "type_info": "Uuid",
-        "origin": {
-          "Table": {
-            "table": "sets",
-            "name": "workout_exercise_id"
-          }
-        }
-      },
-      {
-        "ordinal": 2,
         "name": "position",
         "type_info": "Int4",
         "origin": {
@@ -37,7 +26,7 @@
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "set_type: SetType",
         "type_info": {
           "Custom": {
@@ -60,7 +49,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "weight_kg",
         "type_info": "Numeric",
         "origin": {
@@ -71,7 +60,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "reps",
         "type_info": "Int4",
         "origin": {
@@ -82,7 +71,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "duration_s",
         "type_info": "Int4",
         "origin": {
@@ -93,7 +82,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "distance_m",
         "type_info": "Numeric",
         "origin": {
@@ -104,18 +93,18 @@
         }
       },
       {
-        "ordinal": 8,
-        "name": "rpe",
-        "type_info": "Numeric",
+        "ordinal": 7,
+        "name": "rir",
+        "type_info": "Int2",
         "origin": {
           "Table": {
             "table": "sets",
-            "name": "rpe"
+            "name": "rir"
           }
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "note",
         "type_info": "Text",
         "origin": {
@@ -126,7 +115,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "completed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -139,11 +128,32 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "set_type",
+            "kind": {
+              "Enum": [
+                "working",
+                "warmup",
+                "drop",
+                "failure"
+              ]
+            }
+          }
+        },
+        "Numeric",
+        "Int4",
+        "Int4",
+        "Numeric",
+        "Bool",
+        "Int2",
+        "Text",
+        "Timestamptz"
       ]
     },
     "nullable": [
-      false,
       false,
       false,
       false,
@@ -156,5 +166,5 @@
       true
     ]
   },
-  "hash": "ee974392ebfa26b67f85ca20adf7a9ae071d6250e40f4ca5743d5ee090420a7e"
+  "hash": "7ff1e19b6e63ef7f7c03b417e6a40e19f43c70070dcf1cf8481c7858355275f4"
 }

@@ -19,6 +19,10 @@ interface Props {
   tickUnit?: number;
   /** Short caption naming metric and unit, also the accessible name. */
   label: string;
+  /** Mark the highest point. Off for series where higher is not "better" (bodyweight). */
+  showBest?: boolean;
+  /** What one point is called in the accessible name and hint. */
+  noun?: string;
 }
 
 const HEIGHT = 220;
@@ -37,7 +41,7 @@ function useWidth(ref: React.RefObject<HTMLElement | null>): number {
   return w;
 }
 
-export function LineChart({ points, zeroBased, formatTick, formatValue, tickUnit = 1, label }: Props) {
+export function LineChart({ points, zeroBased, formatTick, formatValue, tickUnit = 1, label, showBest = true, noun = "session" }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const width = useWidth(wrap);
   const [sel, setSel] = useState<number | null>(null);
@@ -76,7 +80,7 @@ export function LineChart({ points, zeroBased, formatTick, formatValue, tickUnit
   const bestAbove = sy(points[best]?.value ?? 0) > 26;
   const last = n - 1;
   const lastAbove = last === best ? bestAbove : sy(points[last]?.value ?? 0) < innerBottom - 26 ? false : true;
-  const lastClash = last !== best && Math.abs(xs[last] - xs[best]) < 90 && lastAbove === bestAbove;
+  const lastClash = showBest && last !== best && Math.abs(xs[last] - xs[best]) < 90 && lastAbove === bestAbove;
 
   function onKeyDown(e: React.KeyboardEvent) {
     const cur = sel ?? n - 1;
@@ -104,7 +108,7 @@ export function LineChart({ points, zeroBased, formatTick, formatValue, tickUnit
         className="linechart-focus"
         tabIndex={0}
         role="group"
-        aria-label={`${label}: ${n} sessions. Best ${bp ? formatValue(bp.value) + " on " + formatDay(bp.date) : "none"}. Use left and right arrow keys to read each session.`}
+        aria-label={`${label}: ${n} ${noun}s.${showBest ? ` Best ${bp ? formatValue(bp.value) + " on " + formatDay(bp.date) : "none"}.` : ""} Use left and right arrow keys to read each ${noun}.`}
         onKeyDown={onKeyDown}
         onFocus={() => setSel((s) => s ?? n - 1)}
       >
@@ -132,13 +136,13 @@ export function LineChart({ points, zeroBased, formatTick, formatValue, tickUnit
           {points.map((p, i) =>
             showDots || i === best || i === last ? <circle key={i} className="chart-dot" cx={xs[i]} cy={sy(p.value)} r={3.5} /> : null,
           )}
-          {bp && <circle className="chart-best" cx={xs[best]} cy={sy(bp.value)} r={7} fill="none" />}
-          {bp && (
+          {showBest && bp && <circle className="chart-best" cx={xs[best]} cy={sy(bp.value)} r={7} fill="none" />}
+          {showBest && bp && (
             <text className="chart-label" {...(() => { const l = labelProps(best, bestAbove); return { x: l.x, y: l.y, textAnchor: l.anchor }; })()}>
               {`Best ${formatValue(bp.value)}`}
             </text>
           )}
-          {n > 0 && last !== best && (
+          {n > 0 && (!showBest || last !== best) && (
             <text className="chart-label dim" {...(() => { const l = labelProps(last, lastClash ? !lastAbove : lastAbove); return { x: l.x, y: l.y, textAnchor: l.anchor }; })()}>
               {formatValue(points[last].value)}
             </text>
@@ -147,7 +151,7 @@ export function LineChart({ points, zeroBased, formatTick, formatValue, tickUnit
         </svg>
       </div>
       <p className="small chart-readout" aria-live="polite">
-        {shown ? `${formatDay(shown.date)}: ${formatValue(shown.value)}` : <span className="dim">Tap or move along the line to read a session.</span>}
+        {shown ? `${formatDay(shown.date)}: ${formatValue(shown.value)}` : <span className="dim">Tap or move along the line to read a {noun}.</span>}
       </p>
     </div>
   );

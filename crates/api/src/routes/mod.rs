@@ -1,4 +1,5 @@
 mod auth;
+mod body_weights;
 mod exercises;
 mod google;
 mod stats;
@@ -18,7 +19,8 @@ pub fn router(state: AppState) -> Router {
         .merge(exercises::routes())
         .merge(gyms::routes())
         .merge(workouts::routes())
-        .merge(stats::routes());
+        .merge(stats::routes())
+        .merge(body_weights::routes());
 
     if state.google.is_some() {
         app = app.merge(google::routes());

@@ -53,7 +53,7 @@ pub struct SetOut {
     reps: Option<i32>,
     duration_s: Option<i32>,
     distance_m: Option<Decimal>,
-    rpe: Option<Decimal>,
+    rir: Option<i16>,
     note: Option<String>,
     #[serde(with = "time::serde::rfc3339::option")]
     completed_at: Option<OffsetDateTime>,
@@ -159,7 +159,7 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
     let set_rows = sqlx::query!(
         r#"select s.id, s.workout_exercise_id, s.position,
                   s.set_type as "set_type: SetType",
-                  s.weight_kg, s.reps, s.duration_s, s.distance_m, s.rpe, s.note, s.completed_at
+                  s.weight_kg, s.reps, s.duration_s, s.distance_m, s.rir, s.note, s.completed_at
              from sets s
              join workout_exercises we on we.id = s.workout_exercise_id
             where we.workout_id = $1 and we.deleted_at is null and s.deleted_at is null
@@ -188,7 +188,7 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
             reps: s.reps,
             duration_s: s.duration_s,
             distance_m: s.distance_m,
-            rpe: s.rpe,
+            rir: s.rir,
             note: s.note,
             completed_at: s.completed_at,
         });
@@ -272,7 +272,7 @@ async fn last_performance(
     let sets = sqlx::query_as!(
         SetOut,
         r#"select id, position, set_type as "set_type: SetType",
-                  weight_kg, reps, duration_s, distance_m, rpe, note, completed_at
+                  weight_kg, reps, duration_s, distance_m, rir, note, completed_at
              from sets
             where workout_exercise_id = $1 and deleted_at is null
             order by position, created_at"#,
@@ -565,7 +565,7 @@ struct NewSet {
     reps: Option<i32>,
     duration_s: Option<i32>,
     distance_m: Option<Decimal>,
-    rpe: Option<Decimal>,
+    rir: Option<i16>,
     note: Option<String>,
     #[serde(default, with = "time::serde::rfc3339::option")]
     completed_at: Option<OffsetDateTime>,
@@ -603,10 +603,10 @@ async fn add_set(
     let set = sqlx::query_as!(
         SetOut,
         r#"insert into sets (workout_exercise_id, position, set_type, weight_kg, reps,
-                             duration_s, distance_m, rpe, note, completed_at)
+                             duration_s, distance_m, rir, note, completed_at)
            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, coalesce($10, now()))
         returning id, position, set_type as "set_type: SetType", weight_kg, reps,
-                  duration_s, distance_m, rpe, note, completed_at"#,
+                  duration_s, distance_m, rir, note, completed_at"#,
         we_id,
         position,
         body.set_type.unwrap_or(SetType::Working) as SetType,
@@ -614,7 +614,7 @@ async fn add_set(
         body.reps,
         body.duration_s,
         body.distance_m,
-        body.rpe,
+        body.rir,
         body.note,
         body.completed_at
     )
@@ -625,7 +625,16 @@ async fn add_set(
     Ok((StatusCode::CREATED, Json(set)))
 }
 
-/// Omitted fields are left unchanged; a field cannot be cleared back to null.
+/// `Some(None)` for a present-but-null field, so `rir` can be cleared; absent means unchanged.
+fn present<'de, D, T>(d: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(d).map(Some)
+}
+
+/// Omitted fields are left unchanged; only `rir` can be cleared back to null (send `null`).
 #[derive(Deserialize)]
 struct UpdateSet {
     set_type: Option<SetType>,
@@ -633,7 +642,8 @@ struct UpdateSet {
     reps: Option<i32>,
     duration_s: Option<i32>,
     distance_m: Option<Decimal>,
-    rpe: Option<Decimal>,
+    #[serde(default, deserialize_with = "present")]
+    rir: Option<Option<i16>>,
     note: Option<String>,
     #[serde(default, with = "time::serde::rfc3339::option")]
     completed_at: Option<OffsetDateTime>,
@@ -653,15 +663,15 @@ async fn update_set(
                   reps = coalesce($5, s.reps),
                   duration_s = coalesce($6, s.duration_s),
                   distance_m = coalesce($7, s.distance_m),
-                  rpe = coalesce($8, s.rpe),
-                  note = coalesce($9, s.note),
-                  completed_at = coalesce($10, s.completed_at)
+                  rir = case when $8 then $9 else s.rir end,
+                  note = coalesce($10, s.note),
+                  completed_at = coalesce($11, s.completed_at)
              from workout_exercises we, workouts w
             where s.id = $1 and we.id = s.workout_exercise_id and w.id = we.workout_id
               and w.user_id = $2 and w.deleted_at is null
               and we.deleted_at is null and s.deleted_at is null
         returning s.id, s.position, s.set_type as "set_type: SetType", s.weight_kg, s.reps,
-                  s.duration_s, s.distance_m, s.rpe, s.note, s.completed_at"#,
+                  s.duration_s, s.distance_m, s.rir, s.note, s.completed_at"#,
         id,
         user_id,
         body.set_type as Option<SetType>,
@@ -669,7 +679,8 @@ async fn update_set(
         body.reps,
         body.duration_s,
         body.distance_m,
-        body.rpe,
+        body.rir.is_some(),
+        body.rir.flatten(),
         body.note,
         body.completed_at
     )

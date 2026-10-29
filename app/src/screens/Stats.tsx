@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { BodyWeightCard } from "../components/BodyWeightCard";
 import { Heatmap } from "../components/Heatmap";
 import { formatDay } from "../lib/format";
 import { navigate, paths } from "../router";
@@ -55,6 +56,8 @@ export function Stats() {
           </section>
         </>
       )}
+
+      <BodyWeightCard />
 
       <section className="stack" aria-labelledby="progress-h">
         <h2 id="progress-h">Exercise progress</h2>

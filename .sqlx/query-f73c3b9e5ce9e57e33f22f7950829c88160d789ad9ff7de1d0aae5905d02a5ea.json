@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "insert into sets (workout_exercise_id, position, set_type, weight_kg, reps,\n                             duration_s, distance_m, rpe, note, completed_at)\n           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, coalesce($10, now()))\n        returning id, position, set_type as \"set_type: SetType\", weight_kg, reps,\n                  duration_s, distance_m, rpe, note, completed_at",
+  "query": "select s.id, s.workout_exercise_id, s.position,\n                  s.set_type as \"set_type: SetType\",\n                  s.weight_kg, s.reps, s.duration_s, s.distance_m, s.rir, s.note, s.completed_at\n             from sets s\n             join workout_exercises we on we.id = s.workout_exercise_id\n            where we.workout_id = $1 and we.deleted_at is null and s.deleted_at is null\n            order by s.position, s.created_at",
   "describe": {
     "columns": [
       {
@@ -16,6 +16,17 @@
       },
       {
         "ordinal": 1,
+        "name": "workout_exercise_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "sets",
+            "name": "workout_exercise_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
         "name": "position",
         "type_info": "Int4",
         "origin": {
@@ -26,7 +37,7 @@
         }
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "set_type: SetType",
         "type_info": {
           "Custom": {
@@ -49,7 +60,7 @@
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "weight_kg",
         "type_info": "Numeric",
         "origin": {
@@ -60,7 +71,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "reps",
         "type_info": "Int4",
         "origin": {
@@ -71,7 +82,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "duration_s",
         "type_info": "Int4",
         "origin": {
@@ -82,7 +93,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "distance_m",
         "type_info": "Numeric",
         "origin": {
@@ -93,18 +104,18 @@
         }
       },
       {
-        "ordinal": 7,
-        "name": "rpe",
-        "type_info": "Numeric",
+        "ordinal": 8,
+        "name": "rir",
+        "type_info": "Int2",
         "origin": {
           "Table": {
             "table": "sets",
-            "name": "rpe"
+            "name": "rir"
           }
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "note",
         "type_info": "Text",
         "origin": {
@@ -115,7 +126,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "completed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -128,31 +139,11 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Int4",
-        {
-          "Custom": {
-            "name": "set_type",
-            "kind": {
-              "Enum": [
-                "working",
-                "warmup",
-                "drop",
-                "failure"
-              ]
-            }
-          }
-        },
-        "Numeric",
-        "Int4",
-        "Int4",
-        "Numeric",
-        "Numeric",
-        "Text",
-        "Timestamptz"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -165,5 +156,5 @@
       true
     ]
   },
-  "hash": "e5e15e55abb3cb092737b3a0138bdfee930558d1f0c610ca6bd47f49bc996313"
+  "hash": "f73c3b9e5ce9e57e33f22f7950829c88160d789ad9ff7de1d0aae5905d02a5ea"
 }

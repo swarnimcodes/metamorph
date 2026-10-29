@@ -471,3 +471,64 @@ async fn stats_require_authentication(pool: PgPool) {
         assert_eq!(status, StatusCode::UNAUTHORIZED, "{uri}");
     }
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn body_weights_are_one_per_day_private_and_validated(pool: PgPool) {
+    let app = app(pool);
+    let (token, _) = login(&app, "lifter").await;
+    let (other, _) = login(&app, "someone_else").await;
+
+    let put = |date: &str, kg: Value| {
+        let (app, token, uri) = (app.clone(), token.clone(), format!("/body-weights/{date}"));
+        async move { call(&app, Method::PUT, &uri, Some(&token), Some(json!({ "weight_kg": kg }))).await }
+    };
+
+    let (status, first) = put("2026-01-05", json!(81.4)).await;
+    assert_eq!(status, StatusCode::OK, "{first}");
+    assert_eq!(first, json!({ "date": "2026-01-05", "weight_kg": 81.4 }));
+    put("2026-01-03", json!(82)).await;
+    // Logging the same day again replaces it instead of adding a second entry.
+    let (_, again) = put("2026-01-05", json!(81.0)).await;
+    assert_eq!(again["weight_kg"], 81.0);
+
+    let list = get(&app, "/body-weights", &token).await;
+    assert_eq!(list, json!([{ "date": "2026-01-03", "weight_kg": 82.0 }, { "date": "2026-01-05", "weight_kg": 81.0 }]));
+    let ranged = get(&app, "/body-weights?from=2026-01-04", &token).await;
+    assert_eq!(ranged.as_array().unwrap().len(), 1);
+
+    assert_eq!(get(&app, "/body-weights", &other).await, json!([]), "entries are private");
+    let (status, _) = call(&app, Method::DELETE, "/body-weights/2026-01-05", Some(&other), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "another user cannot delete it");
+
+    for bad in [json!(0), json!(-3), json!(500), json!(1000)] {
+        let (status, _) = put("2026-01-06", bad).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+    let (status, _) = put("2999-01-01", json!(80)).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "future day");
+    let (status, _) = put("not-a-date", json!(80)).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, _) = call(&app, Method::GET, "/body-weights", None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    let (status, _) = call(&app, Method::DELETE, "/body-weights/2026-01-05", Some(&token), None).await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_eq!(get(&app, "/body-weights", &token).await.as_array().unwrap().len(), 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn body_weight_list_keeps_the_newest_entries_when_capped(pool: PgPool) {
+    let app = app(pool.clone());
+    let (token, user_id) = login(&app, "longtime").await;
+    sqlx::query("insert into body_weights (user_id, measured_on, weight_kg) select $1, d::date, 80 from generate_series('2010-01-01'::date, '2010-01-01'::date + 5001, '1 day') d")
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let list = get(&app, "/body-weights", &token).await;
+    let list = list.as_array().unwrap();
+    assert_eq!(list.len(), 5000);
+    assert_eq!(list[0]["date"], "2010-01-03", "the two oldest days are the ones dropped");
+    assert_eq!(list[4999]["date"], "2023-09-11");
+}

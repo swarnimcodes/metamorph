@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select \"date!\", \"weight_kg!\" from (\n               select to_char(measured_on, 'YYYY-MM-DD') as \"date!\", weight_kg as \"weight_kg!\", measured_on\n                 from body_weights\n                where user_id = $1\n                  and ($2::date is null or measured_on >= $2)\n                  and ($3::date is null or measured_on <= $3)\n                order by measured_on desc\n                limit $4\n           ) newest\n           order by measured_on",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "weight_kg!",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "body_weights",
+            "name": "weight_kg"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      false
+    ]
+  },
+  "hash": "1b77f6855e8bbb353bb8d595cfcca1ddf4cec86dc9763db1e45f985c909bd9f2"
+}

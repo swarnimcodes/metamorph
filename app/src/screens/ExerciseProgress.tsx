@@ -3,9 +3,10 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { useEffect, useMemo, useState } from "react";
 import type { ExerciseProgress as Progress, ProgressPoint, ProgressRecords, UnitSystem } from "../api/types";
 import { LineChart } from "../components/LineChart";
+import { relativeStrength } from "../lib/bodyweight";
 import { formatDay, plural } from "../lib/format";
 import {
-  axisUnit, formatDistance, formatTime, formatTick, formatValue, metricsFor, seriesFor, type MetricId, type Quantity,
+  axisUnit, formatDistance, formatTime, formatTick, formatValue, metricsFor, seriesFor, type MetricDef, type MetricId, type Quantity,
 } from "../lib/progress";
 import { kgToDisplay, weightLabel } from "../lib/units";
 import { navigate, paths } from "../router";
@@ -55,6 +56,10 @@ function recordRows(r: ProgressRecords, unit: UnitSystem): { label: string; valu
 
 const SHOWN = 15;
 
+const RELATIVE: MetricDef = {
+  id: "relative", label: "× Bodyweight", quantity: "ratio", zeroBased: false, get: () => null,
+};
+
 export function ExerciseProgress({ id, variant, from }: { id: string; variant: string | null; from: string | null }) {
   const unit = useAuth((s) => s.user?.unit_system ?? "metric");
   const key = progressKey(id, variant);
@@ -63,6 +68,8 @@ export function ExerciseProgress({ id, variant, from }: { id: string; variant: s
   const exercises = useStats((s) => s.exercises);
   const loadProgress = useStats((s) => s.loadProgress);
   const loadExercises = useStats((s) => s.loadExercises);
+  const bodyWeights = useStats((s) => s.bodyWeights);
+  const loadBodyWeights = useStats((s) => s.loadBodyWeights);
   const [metricId, setMetricId] = useState<MetricId | null>(null);
   const [all, setAll] = useState(false);
 
@@ -72,16 +79,27 @@ export function ExerciseProgress({ id, variant, from }: { id: string; variant: s
   useEffect(() => {
     void loadExercises();
   }, [loadExercises]);
+  useEffect(() => {
+    void loadBodyWeights();
+  }, [loadBodyWeights]);
 
   const variants = useMemo(() => (exercises ?? []).filter((x) => x.exercise_id === id), [exercises, id]);
   const current = variant === null ? null : variants.find((v) => v.variant_key === variant);
-  const metrics = useMemo(() => (data ? metricsFor(data.kind, data.points) : []), [data]);
+  const relative = useMemo(() => (data?.kind === "weight_reps" && bodyWeights ? relativeStrength(data.points, bodyWeights) : []), [data, bodyWeights]);
+  const metrics = useMemo(() => {
+    const base = data ? metricsFor(data.kind, data.points) : [];
+    // Offered once at least one session has a weigh-in on or before it.
+    return relative.length > 0 ? [...base, RELATIVE] : base;
+  }, [data, relative]);
   const metric = metrics.find((m) => m.id === metricId) ?? metrics[0];
-  const series = useMemo(() => (data && metric ? seriesFor(data.points, metric, unit) : []), [data, metric, unit]);
+  const series = useMemo(
+    () => (data && metric ? (metric.id === "relative" ? relative : seriesFor(data.points, metric, unit)) : []),
+    [data, metric, unit, relative],
+  );
   const maxValue = series.reduce((a, s) => Math.max(a, s.value), 0);
 
   const quantity: Quantity = metric?.quantity ?? "reps";
-  const caption = metric ? `${metric.label}${quantity === "weight" ? ` (${weightLabel(unit)})` : quantity === "reps" ? " (reps)" : ""}` : "";
+  const caption = metric ? `${metric.label}${quantity === "weight" ? ` (${weightLabel(unit)})` : quantity === "reps" ? " (reps)" : quantity === "ratio" ? " (est. 1RM ÷ bodyweight)" : ""}` : "";
 
   const subtitle = variant === null
     ? variants.length > 1 ? "All variations" : variants[0]?.variant_label ?? ""

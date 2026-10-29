@@ -3,12 +3,12 @@ import type { ExerciseKind, ProgressPoint, UnitSystem } from "../api/types";
 import { kgToDisplay, weightLabel } from "./units";
 
 export type MetricId =
-  | "e1rm" | "top_weight" | "volume"
+  | "e1rm" | "top_weight" | "relative" | "volume"
   | "total_reps" | "top_reps"
   | "best_time" | "total_time"
   | "best_distance" | "total_distance";
 
-export type Quantity = "weight" | "reps" | "time" | "distance";
+export type Quantity = "weight" | "reps" | "time" | "distance" | "ratio";
 
 export interface MetricDef {
   id: MetricId;
@@ -19,7 +19,7 @@ export interface MetricDef {
   get: (p: ProgressPoint) => number | null;
 }
 
-const M: Record<MetricId, MetricDef> = {
+const M: Record<Exclude<MetricId, "relative">, MetricDef> = {
   e1rm: { id: "e1rm", label: "Est. 1RM", quantity: "weight", zeroBased: false, get: (p) => p.best_e1rm_kg },
   top_weight: { id: "top_weight", label: "Top weight", quantity: "weight", zeroBased: false, get: (p) => p.top_weight_kg },
   volume: { id: "volume", label: "Volume", quantity: "weight", zeroBased: true, get: (p) => p.volume_kg },
@@ -101,6 +101,8 @@ export function formatValue(v: number, q: Quantity, unit: UnitSystem): string {
       return formatTime(v);
     case "distance":
       return formatDistance(v);
+    case "ratio":
+      return `${trim(v, 2)}× BW`;
   }
 }
 
@@ -115,6 +117,8 @@ export function formatTick(v: number, q: Quantity): string {
       return formatTime(v);
     case "distance":
       return v >= 1000 ? `${trim(v / 1000, 2)} km` : `${trim(v, 0)} m`;
+    case "ratio":
+      return trim(v, 2);
   }
 }
 

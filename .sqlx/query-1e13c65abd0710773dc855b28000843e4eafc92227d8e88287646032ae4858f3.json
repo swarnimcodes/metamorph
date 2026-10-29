@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "update sets s\n              set set_type = coalesce($3, s.set_type),\n                  weight_kg = coalesce($4, s.weight_kg),\n                  reps = coalesce($5, s.reps),\n                  duration_s = coalesce($6, s.duration_s),\n                  distance_m = coalesce($7, s.distance_m),\n                  rpe = coalesce($8, s.rpe),\n                  note = coalesce($9, s.note),\n                  completed_at = coalesce($10, s.completed_at)\n             from workout_exercises we, workouts w\n            where s.id = $1 and we.id = s.workout_exercise_id and w.id = we.workout_id\n              and w.user_id = $2 and w.deleted_at is null\n              and we.deleted_at is null and s.deleted_at is null\n        returning s.id, s.position, s.set_type as \"set_type: SetType\", s.weight_kg, s.reps,\n                  s.duration_s, s.distance_m, s.rpe, s.note, s.completed_at",
+  "query": "select id, position, set_type as \"set_type: SetType\",\n                  weight_kg, reps, duration_s, distance_m, rir, note, completed_at\n             from sets\n            where workout_exercise_id = $1 and deleted_at is null\n            order by position, created_at",
   "describe": {
     "columns": [
       {
@@ -94,12 +94,12 @@
       },
       {
         "ordinal": 7,
-        "name": "rpe",
-        "type_info": "Numeric",
+        "name": "rir",
+        "type_info": "Int2",
         "origin": {
           "Table": {
             "table": "sets",
-            "name": "rpe"
+            "name": "rir"
           }
         }
       },
@@ -128,28 +128,7 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        {
-          "Custom": {
-            "name": "set_type",
-            "kind": {
-              "Enum": [
-                "working",
-                "warmup",
-                "drop",
-                "failure"
-              ]
-            }
-          }
-        },
-        "Numeric",
-        "Int4",
-        "Int4",
-        "Numeric",
-        "Numeric",
-        "Text",
-        "Timestamptz"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -165,5 +144,5 @@
       true
     ]
   },
-  "hash": "82392871d10ee848eea69ca04c5c700006e638439522f0d973df5ad919fd9d0e"
+  "hash": "1e13c65abd0710773dc855b28000843e4eafc92227d8e88287646032ae4858f3"
 }
