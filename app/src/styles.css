@@ -206,6 +206,9 @@ input::placeholder { color: #6f757e; }
 .sheet-head .icon-btn:last-child { margin-left: auto; }
 .sheet-title { font-size: 1.25rem; font-weight: 700; flex: 1; }
 .sheet-head .sheet-title { flex: 0 1 auto; margin-right: auto; }
+/* Search sheets keep one height whatever the results, so nothing jumps while typing. dvh follows the keyboard. */
+.sheet.tall { height: 88dvh; }
+.sheet.tall .sheet-body { flex: 1; min-height: 0; }
 .sheet-body { overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
 .sticky-action { position: sticky; bottom: 0; }
 .type-group { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
@@ -226,6 +229,7 @@ input::placeholder { color: #6f757e; }
 
 @media (min-width: 600px) {
   .sheet { bottom: auto; top: 50%; transform: translate(-50%, -50%); border-bottom: 1px solid var(--border); border-radius: 20px; }
+  .sheet.tall { height: min(88dvh, 640px); }
   .sheet[data-starting-style], .sheet[data-ending-style] { transform: translate(-50%, calc(-50% + 16px)); }
   .screen { padding-top: var(--space-6); }
 }

@@ -28,6 +28,7 @@ export function GymPicker({ open, onOpenChange }: { open: boolean; onOpenChange:
 
   return (
     <Sheet
+      tall
       open={open}
       onOpenChange={onOpenChange}
       title={view === "pick" ? "Choose gym" : "New gym"}

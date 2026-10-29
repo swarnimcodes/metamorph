@@ -8,15 +8,20 @@ interface Props {
   children: ReactNode;
   /** Optional element on the left of the title (e.g. a back button). */
   leading?: ReactNode;
+  /**
+   * Fixed height instead of fitting the content. For sheets whose content changes as you type (search
+   * results), so the top edge stays put and only the list scrolls.
+   */
+  tall?: boolean;
 }
 
 /** Bottom sheet on phones, centered card on wide screens. Focus trap/restore come from Base UI. */
-export function Sheet({ open, onOpenChange, title, children, leading }: Props) {
+export function Sheet({ open, onOpenChange, title, children, leading, tall }: Props) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop className="backdrop" />
-        <Dialog.Popup className="sheet">
+        <Dialog.Popup className={tall ? "sheet tall" : "sheet"}>
           <header className="sheet-head">
             {leading}
             <Dialog.Title className="sheet-title">{title}</Dialog.Title>

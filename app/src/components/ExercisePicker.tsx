@@ -115,6 +115,7 @@ export function ExercisePicker({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <Sheet
+      tall
       open={open}
       onOpenChange={onOpenChange}
       title={chosen ? chosen.name : "Add exercise"}
