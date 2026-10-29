@@ -59,4 +59,9 @@ export const useAuth = create<AuthState>((set, get) => ({
 
 setSessionExpiredHandler(() => useAuth.getState().logout());
 
-export const errMsg = (e: unknown): string => (e instanceof Error ? e.message : "Something went wrong");
+/** Tauri plugins reject with a plain string, not an Error, so strings are shown as they are. */
+export const errMsg = (e: unknown): string => {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string" && e.trim()) return e;
+  return "Something went wrong";
+};
