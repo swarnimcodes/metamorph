@@ -548,7 +548,7 @@ async fn create_gym(app: &Router, token: &str, body: Value) -> (StatusCode, Valu
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn gym_search_normalises_apostrophes_and_prefers_saved_gyms(pool: PgPool) {
+async fn gym_search_normalises_apostrophes_and_ranks_recent_gyms_first(pool: PgPool) {
     let app = app(pool, true);
     let (a, _) = login(&app, "gymrat").await;
     let (status, golds) = create_gym(&app, &a, json!({ "name": "Golds Gym Aundh", "city": "Pune" })).await;
@@ -565,12 +565,20 @@ async fn gym_search_normalises_apostrophes_and_prefers_saved_gyms(pool: PgPool) 
     let (_, found) = get(&app, "/gyms?q=zzzzqqq", &a).await;
     assert!(found.as_array().unwrap().is_empty());
 
-    // Empty query: someone else's gym is listed after the caller's saved ones.
+    // Empty query: gyms the caller trained at come first, most recent first, then verified, then by name.
     let (b, _) = login(&app, "newbie").await;
     create_gym(&app, &b, json!({ "name": "Aaa Fitness", "city": "Mumbai" })).await;
+    let anytime = get(&app, "/gyms?q=anytime", &a).await.1[0]["id"].clone();
+    for (gym, at) in [(&anytime, "2026-01-02T09:00:00Z"), (&golds["id"], "2026-01-01T09:00:00Z")] {
+        let (status, w) = post(&app, "/workouts", &a, json!({ "gym_id": gym, "started_at": at })).await;
+        assert_eq!(status, StatusCode::CREATED, "{w}");
+    }
     let (_, list) = get(&app, "/gyms", &a).await;
     let names: Vec<&str> = list.as_array().unwrap().iter().map(|g| g["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["Anytime Fitness Baner", "Golds Gym Aundh", "Aaa Fitness"]);
+    assert_eq!(names, ["Anytime Fitness Baner", "Golds Gym Aundh", "Cult Kalyani Nagar", "Aaa Fitness"]);
+    // Someone else's workouts do not reorder mine.
+    let (_, theirs) = get(&app, "/gyms", &b).await;
+    assert_eq!(theirs[0]["name"], "Cult Kalyani Nagar");
     let (_, list) = get(&app, "/gyms?limit=1", &a).await;
     assert_eq!(list.as_array().unwrap().len(), 1);
 }
@@ -606,75 +614,40 @@ async fn gym_duplicate_guard_returns_409_and_force_overrides(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn default_gym_switching_keeps_exactly_one_default(pool: PgPool) {
-    let app = app(pool.clone(), true);
-    let (a, a_id) = login(&app, "gymrat").await;
-    let (_, g1) = create_gym(&app, &a, json!({ "name": "Alpha Gym", "city": "Pune" })).await;
-    let (_, g2) = create_gym(&app, &a, json!({ "name": "Beta Fitness", "city": "Pune" })).await;
-    let (g1, g2) = (g1["id"].as_str().unwrap().to_string(), g2["id"].as_str().unwrap().to_string());
-
-    // The first saved gym became the default, the second did not.
-    let (_, mine) = get(&app, "/me/gyms", &a).await;
-    assert_eq!(mine[0]["id"], g1);
-    assert_eq!(mine[0]["is_default"], true);
-    assert_eq!(mine[1]["is_default"], false);
-
-    let make_default = |id: String| {
-        let app = app.clone();
-        let a = a.clone();
-        async move { call(&app, Method::PUT, &format!("/me/gyms/{id}/default"), Some(&a), None).await }
-    };
-    let (status, _) = make_default(g2.clone()).await;
-    assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, mine) = get(&app, "/me/gyms", &a).await;
-    assert_eq!(mine[0]["id"], g2);
-    assert_eq!(mine.as_array().unwrap().iter().filter(|g| g["is_default"] == true).count(), 1);
-
-    // A gym the caller has not saved yet gets added and made default.
-    let (b, _) = login(&app, "other").await;
-    let (_, g3) = create_gym(&app, &b, json!({ "name": "Gamma Club", "city": "Delhi" })).await;
-    let g3 = g3["id"].as_str().unwrap().to_string();
-    let (status, _) = make_default(g3.clone()).await;
-    assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, mine) = get(&app, "/me/gyms", &a).await;
-    assert_eq!(mine.as_array().unwrap().len(), 3);
-    assert_eq!(mine[0]["id"], g3);
-    let defaults = sqlx::query_scalar!(
-        "select count(*) as \"n!\" from user_gyms where user_id = $1 and is_default",
-        a_id
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert_eq!(defaults, 1);
-
-    // Unknown and deleted gyms are 404 and leave the default alone.
-    let (status, _) = make_default(Uuid::now_v7().to_string()).await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    sqlx::query!("update gyms set deleted_at = now() where id = $1", g1.parse::<Uuid>().unwrap())
-        .execute(&pool)
-        .await
-        .unwrap();
-    let (status, _) = make_default(g1.clone()).await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    let (_, mine) = get(&app, "/me/gyms", &a).await;
-    assert_eq!(mine[0]["id"], g3);
-    let (_, found) = get(&app, "/gyms?q=alpha", &a).await;
-    assert!(found.as_array().unwrap().is_empty());
-}
-
-#[sqlx::test(migrations = "../../migrations")]
-async fn my_gyms_never_shows_other_users_gyms(pool: PgPool) {
+async fn new_workouts_start_at_the_gym_of_the_last_workout(pool: PgPool) {
     let app = app(pool, true);
     let (a, _) = login(&app, "gymrat").await;
-    let (b, _) = login(&app, "other").await;
-    create_gym(&app, &a, json!({ "name": "Alpha Gym", "city": "Pune" })).await;
-    let (_, mine) = get(&app, "/me/gyms", &b).await;
-    assert!(mine.as_array().unwrap().is_empty());
+    let (_, alpha) = create_gym(&app, &a, json!({ "name": "Alpha Gym", "city": "Pune" })).await;
+    let (_, beta) = create_gym(&app, &a, json!({ "name": "Beta Fitness", "city": "Pune" })).await;
 
-    // A workout created without a gym leaves it null.
-    let (_, w) = post(&app, "/workouts", &a, json!({})).await;
-    assert!(w["gym_id"].is_null());
+    // Nothing logged yet: no gym. Creating a gym does not pick one.
+    let (_, first) = post(&app, "/workouts", &a, json!({})).await;
+    assert!(first["gym"].is_null(), "{first}");
+
+    // An explicit gym wins and becomes the next default.
+    let (_, w) = post(&app, "/workouts", &a, json!({ "gym_id": alpha["id"], "started_at": "2026-01-01T09:00:00Z" })).await;
+    assert_eq!(w["gym"]["name"], "Alpha Gym");
+    let (_, next) = post(&app, "/workouts", &a, json!({ "started_at": "2026-01-02T09:00:00Z" })).await;
+    assert_eq!(next["gym"]["name"], "Alpha Gym", "carried over from the last workout");
+
+    // The most recent workout decides, and an explicit choice still overrides.
+    post(&app, "/workouts", &a, json!({ "gym_id": beta["id"], "started_at": "2026-01-03T09:00:00Z" })).await;
+    let (_, after) = post(&app, "/workouts", &a, json!({ "started_at": "2026-01-04T09:00:00Z" })).await;
+    assert_eq!(after["gym"]["name"], "Beta Fitness");
+    let (_, chosen) = post(&app, "/workouts", &a, json!({ "gym_id": alpha["id"], "started_at": "2026-01-05T09:00:00Z" })).await;
+    assert_eq!(chosen["gym"]["name"], "Alpha Gym");
+
+    // The gym on a workout carries what a Directions button needs.
+    let (_, cult) = get(&app, "/gyms?q=kalyani", &a).await;
+    let (_, w) = post(&app, "/workouts", &a, json!({ "gym_id": cult[0]["id"], "started_at": "2026-01-06T09:00:00Z" })).await;
+    assert_eq!(w["gym"]["area"], "Kalyani Nagar");
+    assert_eq!(w["gym"]["maps_url"], "https://maps.app.goo.gl/9nog9QtzoJD9qtGQA");
+    assert!((w["gym"]["lat"].as_f64().unwrap() - 18.5492421).abs() < 1e-9);
+
+    // Other people's workouts never leak into my default.
+    let (b, _) = login(&app, "newbie").await;
+    let (_, theirs) = post(&app, "/workouts", &b, json!({})).await;
+    assert!(theirs["gym"].is_null());
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -702,10 +675,11 @@ async fn workouts_carry_exercise_kind_and_gym_name(pool: PgPool) {
     let (_, list) = get(&app, "/workouts", &token).await;
     assert_eq!(list[0]["gym"]["name"], "Golds Gym Aundh");
 
-    // A workout without a gym reports null rather than omitting the field.
-    let (_, bare) = post(&app, "/workouts", &token, json!({})).await;
+    // A workout without a gym reports null rather than omitting the field (a new user has no last gym).
+    let (fresh, _) = login(&app, "fresh").await;
+    let (_, bare) = post(&app, "/workouts", &fresh, json!({})).await;
     assert!(bare["gym"].is_null());
-    let (_, list) = get(&app, "/workouts", &token).await;
+    let (_, list) = get(&app, "/workouts", &fresh).await;
     assert!(list.as_array().unwrap().iter().any(|w| w["gym"].is_null()));
 
     // History keeps the gym name even after the gym is soft-deleted.
@@ -861,4 +835,79 @@ async fn search_handles_partially_typed_tag_words(pool: PgPool) {
     // Too short to guess: two letters never become a tag.
     let r = search("pr").await;
     assert!(r.as_array().unwrap().iter().all(|e| suggested(e).is_empty()), "{r}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn seeded_gym_is_verified_global_and_found_by_area_city_or_name(pool: PgPool) {
+    let app = app(pool, true);
+    let (token, _) = login(&app, "newcomer").await;
+
+    for q in ["cult", "kalyani", "pune", "cult%20pune", "nagar%20cult", "Cult%20Gym%20Kalyani"] {
+        let (_, found) = get(&app, &format!("/gyms?q={q}"), &token).await;
+        assert_eq!(found[0]["name"], "Cult Kalyani Nagar", "query {q:?}: {found}");
+    }
+    let (_, found) = get(&app, "/gyms?q=mumbai", &token).await;
+    assert!(found.as_array().unwrap().is_empty());
+
+    let (_, found) = get(&app, "/gyms?q=kalyani", &token).await;
+    let cult = &found[0];
+    assert_eq!(cult["verified"], true);
+    assert_eq!(cult["area"], "Kalyani Nagar");
+    assert_eq!(cult["city"], "Pune");
+    assert_eq!(cult["chain"], "Cult");
+    assert_eq!(cult["maps_url"], "https://maps.app.goo.gl/9nog9QtzoJD9qtGQA");
+    assert!((cult["lat"].as_f64().unwrap() - 18.5492421).abs() < 1e-9);
+    assert!((cult["lng"].as_f64().unwrap() - 73.9060673).abs() < 1e-9);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn gym_area_and_maps_link_are_stored_and_the_link_is_restricted(pool: PgPool) {
+    let app = app(pool, true);
+    let (token, _) = login(&app, "gymrat").await;
+
+    let (status, gym) = create_gym(
+        &app,
+        &token,
+        json!({ "name": "Iron Works", "area": " Baner ", "city": "Pune",
+                "maps_url": "https://www.google.com/maps/place/Iron+Works" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{gym}");
+    assert_eq!(gym["area"], "Baner", "trimmed");
+    assert_eq!(gym["maps_url"], "https://www.google.com/maps/place/Iron+Works");
+    assert_eq!(gym["verified"], false);
+    assert!(gym["lat"].is_null());
+    let (_, found) = get(&app, "/gyms?q=baner", &token).await;
+    assert_eq!(found[0]["area"], "Baner");
+
+    for (i, bad) in [
+        "http://maps.app.goo.gl/x",
+        "https://evil.example/maps",
+        "https://maps.app.goo.gl.evil.example/x",
+        "https://www.google.com/search?q=x",
+        "https://goo.gl/other",
+        "https://user@maps.app.goo.gl/x",
+        "https://maps.app.goo.gl/has space",
+        "javascript:alert(1)",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let (status, body) =
+            create_gym(&app, &token, json!({ "name": format!("Gym {i}xyz"), "maps_url": bad })).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{bad}: {body}");
+    }
+    for (name, ok) in [
+        ("Alpha Barbell", "https://maps.app.goo.gl/abc"),
+        ("Zenith Fitness", "https://goo.gl/maps/abc"),
+        ("Quartz Strength", "https://maps.apple.com/?q=x"),
+        ("Nimbus Club", "https://www.openstreetmap.org/node/1"),
+    ] {
+        let (status, body) = create_gym(&app, &token, json!({ "name": name, "maps_url": ok })).await;
+        assert_eq!(status, StatusCode::CREATED, "{ok}: {body}");
+    }
+    // A blank link is just absent.
+    let (status, g) = create_gym(&app, &token, json!({ "name": "Blank Link Club", "maps_url": "  " })).await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert!(g["maps_url"].is_null());
 }

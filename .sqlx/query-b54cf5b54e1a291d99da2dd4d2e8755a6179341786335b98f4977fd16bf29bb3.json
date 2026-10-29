@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select w.id, w.title, w.gym_id, g.name as \"gym_name?\", g.city as \"gym_city?\",\n                  w.started_at, w.ended_at,\n                  (select count(*) from workout_exercises we\n                    where we.workout_id = w.id and we.deleted_at is null) as \"exercise_count!\",\n                  (select count(*) from sets s\n                     join workout_exercises we on we.id = s.workout_exercise_id\n                    where we.workout_id = w.id and we.deleted_at is null\n                      and s.deleted_at is null) as \"set_count!\"\n             from workouts w\n             left join gyms g on g.id = w.gym_id\n            where w.user_id = $1 and w.deleted_at is null\n              and ($2::timestamptz is null or w.started_at < $2)\n            order by w.started_at desc\n            limit $3",
+  "query": "select w.id, w.title, w.gym_id, g.name as \"gym_name?\", g.area as \"gym_area?\", g.city as \"gym_city?\",\n                  g.lat as \"gym_lat?\", g.lng as \"gym_lng?\", g.maps_url as \"gym_maps_url?\",\n                  w.started_at, w.ended_at, w.notes\n             from workouts w\n             left join gyms g on g.id = w.gym_id\n            where w.id = $1 and w.user_id = $2 and w.deleted_at is null",
   "describe": {
     "columns": [
       {
@@ -49,6 +49,17 @@
       },
       {
         "ordinal": 4,
+        "name": "gym_area?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "area"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
         "name": "gym_city?",
         "type_info": "Text",
         "origin": {
@@ -59,7 +70,40 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
+        "name": "gym_lat?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "lat"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "gym_lng?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "lng"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "gym_maps_url?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "maps_url"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
         "name": "started_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -70,7 +114,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 10,
         "name": "ended_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -81,36 +125,37 @@
         }
       },
       {
-        "ordinal": 7,
-        "name": "exercise_count!",
-        "type_info": "Int8",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 8,
-        "name": "set_count!",
-        "type_info": "Int8",
-        "origin": "Expression"
+        "ordinal": 11,
+        "name": "notes",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "notes"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
-        "Timestamptz",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
       false,
       true,
       true,
-      false,
+      true,
+      true,
+      true,
+      true,
+      true,
       true,
       false,
       true,
-      null,
-      null
+      true
     ]
   },
-  "hash": "926496eebd3c71bef6c8c96a0ef475023db75467db3b5080394d26ba4b918223"
+  "hash": "b54cf5b54e1a291d99da2dd4d2e8755a6179341786335b98f4977fd16bf29bb3"
 }

@@ -1,0 +1,138 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with q as (\n               select btrim(lower(regexp_replace(replace(replace($1::text, '''', ''), '’', ''),\n                                                 '[^[:alnum:]]+', ' ', 'g'))) as nq\n           ), scored as (\n               select g.id, g.name, g.chain, g.area, g.address, g.city, g.lat, g.lng, g.maps_url, g.verified,\n                      (select max(w.started_at) from workouts w\n                        where w.gym_id = g.id and w.user_id = $2 and w.deleted_at is null) as last_used,\n                      similarity(n.nname, q.nq) as score,\n                      -- every word of the query appears in the name, area or city, in any order\n                      not exists (\n                          select 1 from unnest(string_to_array(q.nq, ' ')) as w\n                           where w <> '' and n.hay not like '%' || w || '%'\n                      ) as contains\n                 from gyms g\n                 cross join q\n                 cross join lateral (\n                     select btrim(lower(regexp_replace(replace(replace(g.name, '''', ''), '’', ''),\n                                                       '[^[:alnum:]]+', ' ', 'g'))) as nname,\n                            btrim(lower(regexp_replace(replace(replace(\n                                g.name || ' ' || coalesce(g.area, '') || ' ' || coalesce(g.city, ''), '''', ''), '’', ''),\n                                '[^[:alnum:]]+', ' ', 'g'))) as hay\n                 ) n\n                where g.deleted_at is null\n           )\n           select id as \"id!\", name as \"name!\", chain, area, address, city, lat, lng, maps_url, verified as \"verified!\"\n             from scored, q\n            where q.nq = '' or contains or score > 0.3\n            order by (case when q.nq = '' then true else contains end) desc,\n                     (case when q.nq = '' then 0 else score end) desc,\n                     last_used desc nulls last, verified desc, name\n            limit $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "chain",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "chain"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "area",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "area"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "address",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "address"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "city",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "city"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "lat",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "lat"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "lng",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "lng"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "maps_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "maps_url"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "verified!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "gyms",
+            "name": "verified"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "9cfe79883c65f4b9f5c25eef95822d5d27dfb61cc4cb32ef98b458e9aa7ce694"
+}

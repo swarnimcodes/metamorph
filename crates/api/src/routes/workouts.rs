@@ -78,13 +78,28 @@ pub struct WorkoutExerciseOut {
 pub struct GymRef {
     id: Uuid,
     name: String,
+    area: Option<String>,
     city: Option<String>,
+    lat: Option<f64>,
+    lng: Option<f64>,
+    maps_url: Option<String>,
+}
+
+/// The gym columns of a left-joined row, any of which is null when the workout has no gym.
+struct GymJoin {
+    id: Option<Uuid>,
+    name: Option<String>,
+    area: Option<String>,
+    city: Option<String>,
+    lat: Option<f64>,
+    lng: Option<f64>,
+    maps_url: Option<String>,
 }
 
 impl GymRef {
-    /// Built from a left-joined gym row; a soft-deleted gym keeps its name in history.
-    fn from_join(id: Option<Uuid>, name: Option<String>, city: Option<String>) -> Option<Self> {
-        Some(Self { id: id?, name: name?, city })
+    /// A soft-deleted gym keeps its name in history.
+    fn from_join(j: GymJoin) -> Option<Self> {
+        Some(Self { id: j.id?, name: j.name?, area: j.area, city: j.city, lat: j.lat, lng: j.lng, maps_url: j.maps_url })
     }
 }
 
@@ -118,7 +133,8 @@ pub struct WorkoutSummary {
 
 async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<WorkoutOut> {
     let w = sqlx::query!(
-        r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.city as "gym_city?",
+        r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.area as "gym_area?", g.city as "gym_city?",
+                  g.lat as "gym_lat?", g.lng as "gym_lng?", g.maps_url as "gym_maps_url?",
                   w.started_at, w.ended_at, w.notes
              from workouts w
              left join gyms g on g.id = w.gym_id
@@ -198,7 +214,15 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
         id: w.id,
         title: w.title,
         gym_id: w.gym_id,
-        gym: GymRef::from_join(w.gym_id, w.gym_name, w.gym_city),
+        gym: GymRef::from_join(GymJoin {
+            id: w.gym_id,
+            name: w.gym_name,
+            area: w.gym_area,
+            city: w.gym_city,
+            lat: w.gym_lat,
+            lng: w.gym_lng,
+            maps_url: w.gym_maps_url,
+        }),
         started_at: w.started_at,
         ended_at: w.ended_at,
         notes: w.notes,
@@ -298,9 +322,15 @@ async fn create(
     AuthUser(user_id): AuthUser,
     AppJson(body): AppJson<CreateWorkout>,
 ) -> AppResult<(StatusCode, Json<WorkoutOut>)> {
+    // No gym given: start where the caller last trained.
     let id = sqlx::query_scalar!(
         r#"insert into workouts (user_id, title, gym_id, notes, started_at)
-           values ($1, $2, $3, $4, coalesce($5, now()))
+           values ($1, $2,
+                   coalesce($3, (select w.gym_id from workouts w
+                                  join gyms g on g.id = w.gym_id and g.deleted_at is null
+                                 where w.user_id = $1 and w.deleted_at is null
+                                 order by w.started_at desc limit 1)),
+                   $4, coalesce($5, now()))
            returning id"#,
         user_id,
         body.title,
@@ -328,7 +358,8 @@ async fn list(
 ) -> AppResult<Json<Vec<WorkoutSummary>>> {
     let limit = params.limit.unwrap_or(20).clamp(1, 100);
     let rows = sqlx::query!(
-        r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.city as "gym_city?",
+        r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.area as "gym_area?", g.city as "gym_city?",
+                  g.lat as "gym_lat?", g.lng as "gym_lng?", g.maps_url as "gym_maps_url?",
                   w.started_at, w.ended_at,
                   (select count(*) from workout_exercises we
                     where we.workout_id = w.id and we.deleted_at is null) as "exercise_count!",
@@ -354,7 +385,15 @@ async fn list(
             id: r.id,
             title: r.title,
             gym_id: r.gym_id,
-            gym: GymRef::from_join(r.gym_id, r.gym_name, r.gym_city),
+            gym: GymRef::from_join(GymJoin {
+                id: r.gym_id,
+                name: r.gym_name,
+                area: r.gym_area,
+                city: r.gym_city,
+                lat: r.gym_lat,
+                lng: r.gym_lng,
+                maps_url: r.gym_maps_url,
+            }),
             started_at: r.started_at,
             ended_at: r.ended_at,
             exercise_count: r.exercise_count,
