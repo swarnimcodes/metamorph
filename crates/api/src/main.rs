@@ -23,6 +23,12 @@ async fn main() -> anyhow::Result<()> {
         .map_err(|_| anyhow::anyhow!("DATABASE_URL must be set"))?;
     let pool = PgPoolOptions::new().max_connections(10).connect(&database_url).await?;
 
+    // The server has no sqlx CLI, so the binary carries its migrations and can apply them itself.
+    if std::env::var("RUN_MIGRATIONS").is_ok_and(|v| v == "true" || v == "1") {
+        sqlx::migrate!("../../migrations").run(&pool).await?;
+        tracing::info!("database migrations are up to date");
+    }
+
     if config.dev_login {
         tracing::warn!("DEV_LOGIN is enabled: POST /auth/dev-login issues tokens without credentials");
     }

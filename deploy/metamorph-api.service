@@ -1,0 +1,35 @@
+[Unit]
+Description=Metamorph API
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+User=metamorph
+Group=metamorph
+EnvironmentFile=/etc/metamorph/env
+ExecStart=/usr/local/bin/metamorph-api
+Restart=on-failure
+RestartSec=3
+
+# The box has 512 MB of RAM: keep a runaway API from taking Postgres down with it.
+MemoryMax=192M
+
+# It only needs to listen on a local port and talk to Postgres over its unix socket.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -31,8 +31,21 @@ interface Opts {
   retried?: boolean;
 }
 
+/** `API_URL` may be absolute (dev, the Android app) or relative like "/api" (same origin as the page). */
+export function resolveApiBase(apiUrl: string, origin: string): string {
+  return new URL(apiUrl.endsWith("/") ? apiUrl : apiUrl + "/", origin).toString();
+}
+
+/**
+ * Joins a request path onto the API base. Call sites write paths like "/auth/google"; resolved as a
+ * URL reference that leading slash would discard the base's own path ("/api"), so it is dropped here.
+ */
+export function joinUrl(base: string, path: string): string {
+  return new URL(path.replace(/^\/+/, ""), base).toString();
+}
+
 function url(path: string, query?: Opts["query"], keepEmpty = false): string {
-  const u = new URL(path, API_URL.endsWith("/") ? API_URL : API_URL + "/");
+  const u = new URL(joinUrl(resolveApiBase(API_URL, window.location.origin), path));
   for (const [k, v] of Object.entries(query ?? {})) {
     if (v !== undefined && (v !== "" || keepEmpty)) u.searchParams.set(k, String(v)); // encodes '+' etc.
   }
