@@ -11,6 +11,8 @@ interface AuthState {
   status: Status;
   user: Me | null;
   error: string | null;
+  /** A one-off message for the sign-in screen, e.g. after the account was deleted. */
+  notice: string | null;
   /** Resume a stored session on app start. */
   init: () => Promise<void>;
   /** Shared tail of every sign-in method: persist tokens, then load the profile. */
@@ -18,6 +20,8 @@ interface AuthState {
   /** Dev-only username login. Google sign-in calls completeLogin() with its own response. */
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
+  /** Deletes the account for good, then signs out. Throws if the server refuses (e.g. wrong username). */
+  deleteAccount: (confirmUsername: string) => Promise<void>;
   /** PATCH /me; the returned profile replaces the stored user so every screen re-renders. */
   updateProfile: (patch: MeUpdate) => Promise<void>;
 }
@@ -26,6 +30,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   status: "loading",
   user: null,
   error: null,
+  notice: null,
 
   init: async () => {
     if (!loadSession()) return set({ status: "signed-out" });
@@ -41,7 +46,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   completeLogin: async (r) => {
     clearAll(); // whoever was here before, none of their data is shown to this account
     storeLogin(r);
-    set({ user: await api.me(), status: "signed-in", error: null });
+    set({ user: await api.me(), status: "signed-in", error: null, notice: null });
   },
 
   devLogin: async (username) => {
@@ -53,6 +58,12 @@ export const useAuth = create<AuthState>((set, get) => ({
     clearSession();
     clearAll();
     set({ status: "signed-out", user: null });
+  },
+
+  deleteAccount: async (confirmUsername) => {
+    await api.deleteAccount(confirmUsername);
+    get().logout();
+    set({ notice: "Your account and all its data were deleted." });
   },
 
   updateProfile: async (patch) => {

@@ -1,6 +1,7 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { useState } from "react";
+import { DeleteAccountSheet } from "../components/DeleteAccountSheet";
 import type { UnitSystem } from "../api/types";
 import { toastError } from "../lib/toast";
 import { errMsg, useAuth } from "../stores/auth";
@@ -15,6 +16,7 @@ export function You() {
   const updateProfile = useAuth((s) => s.updateProfile);
   const logout = useAuth((s) => s.logout);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function choose(next: UnitSystem) {
     if (!user || next === user.unit_system) return;
@@ -53,6 +55,13 @@ export function You() {
       </section>
 
       <button className="btn danger-text" onClick={logout}>Log out</button>
+
+      <section className="stack danger-zone" aria-labelledby="delete-h">
+        <h2 id="delete-h">Delete account</h2>
+        <p className="dim small">Permanently removes your account and all of your data.</p>
+        <button className="btn danger-text" onClick={() => setDeleting(true)}>Delete my account…</button>
+      </section>
+      <DeleteAccountSheet open={deleting} onOpenChange={setDeleting} />
     </main>
   );
 }

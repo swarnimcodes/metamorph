@@ -145,6 +145,9 @@ export const api = {
     request<LoginResponse>("POST", "/auth/google/signup", { body, auth: false }),
   me: () => request<Me>("GET", "/me"),
   updateMe: (body: MeUpdate) => request<Me>("PATCH", "/me", { body }),
+  /** Permanently deletes the account and everything it owns. The username must be typed to confirm. */
+  deleteAccount: (confirmUsername: string) =>
+    request<void>("DELETE", "/me", { body: { confirm_username: confirmUsername } }),
 
   searchExercises: (q: string, limit = 25) => request<Exercise[]>("GET", "/exercises", { query: { q, limit } }),
   tags: () => request<Tag[]>("GET", "/tags"),

@@ -17,6 +17,7 @@ export function Login() {
   const [username, setUsername] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const notice = useAuth((s) => s.notice);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [signup, setSignup] = useState<GoogleSignupRequired | null>(null);
@@ -69,6 +70,7 @@ export function Login() {
           <p className="dim">Log your lifts. Keep it simple.</p>
         </div>
 
+        {notice && <p className="dim" role="status">{notice}</p>}
         <GoogleButton onCredential={(t) => void onGoogleCredential(t)} disabled={googleBusy} />
         {googleBusy && <p className="dim" role="status">Signing in…</p>}
         {googleError && <p className="error" role="alert">{googleError}</p>}
