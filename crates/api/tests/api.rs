@@ -918,3 +918,106 @@ async fn gym_area_and_maps_link_are_stored_and_the_link_is_restricted(pool: PgPo
     assert_eq!(status, StatusCode::CREATED);
     assert!(g["maps_url"].is_null());
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deleting_an_account_removes_everything_it_owns_and_nothing_else(pool: PgPool) {
+    let app = app(pool.clone(), true);
+    let leaver = login_full(&app, "leaver").await;
+    let token = leaver["access_token"].as_str().unwrap().to_string();
+    let refresh_tok = leaver["refresh_token"].as_str().unwrap().to_string();
+    let leaver_id: Uuid = leaver["user_id"].as_str().unwrap().parse().unwrap();
+    let (other, other_id) = login(&app, "stayer").await;
+
+    // Both accounts own a workout with a set, a weigh-in, and a gym they created.
+    let bench = exercise_id(&app, &token, "bench-press").await;
+    async fn fill(app: &Router, token: &str, bench: Uuid, gym_name: &str) -> Value {
+        let (_, gym) = post(app, "/gyms", token, json!({ "name": gym_name, "city": "Pune" })).await;
+        let (_, w) = post(app, "/workouts", token, json!({ "gym_id": gym["id"] })).await;
+        let wid = w["id"].as_str().unwrap().to_string();
+        let (_, we) = post(app, &format!("/workouts/{wid}/exercises"), token, json!({ "exercise_id": bench })).await;
+        post(app, &format!("/workout-exercises/{}/sets", we["id"].as_str().unwrap()), token, json!({ "weight_kg": 60, "reps": 5 })).await;
+        let (status, _) =
+            call(app, Method::PUT, "/body-weights/2026-01-05", Some(token), Some(json!({ "weight_kg": 80 }))).await;
+        assert_eq!(status, StatusCode::OK);
+        gym
+    }
+    let leaver_gym = fill(&app, &token, bench, "Leaver Gym").await;
+    fill(&app, &other, bench, "Stayer Gym").await;
+
+    let rows_owned_by = |id: Uuid| {
+        let pool = pool.clone();
+        async move {
+            // Every table with a user_id column, found from the schema so a table added later is covered too.
+            let tables: Vec<String> = sqlx::query_scalar(
+                "select distinct table_name::text from information_schema.columns
+                  where table_schema = 'public' and column_name = 'user_id'",
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+            let mut counts = std::collections::BTreeMap::new();
+            for t in tables {
+                let n: i64 = // Table names come from information_schema above, not from input.
+                sqlx::query_scalar(sqlx::AssertSqlSafe(format!("select count(*) from {t} where user_id = $1")))
+                    .bind(id)
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+                counts.insert(t, n);
+            }
+            let users: i64 = sqlx::query_scalar("select count(*) from users where id = $1").bind(id).fetch_one(&pool).await.unwrap();
+            counts.insert("users".into(), users);
+            counts
+        }
+    };
+    let before_leaver = rows_owned_by(leaver_id).await;
+    let before_other = rows_owned_by(other_id).await;
+    assert!(before_leaver["workouts"] > 0 && before_leaver["body_weights"] > 0 && before_leaver["refresh_tokens"] > 0, "{before_leaver:?}");
+
+    // The confirmation has to match the username (case and surrounding space do not matter), and a wrong
+    // one deletes nothing.
+    for wrong in ["", "stayer", "leaver2", "someone else"] {
+        let (status, body) =
+            call(&app, Method::DELETE, "/me", Some(&token), Some(json!({ "confirm_username": wrong }))).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{wrong:?}: {body}");
+        assert_eq!(body["code"], "username_mismatch");
+    }
+    assert_eq!(rows_owned_by(leaver_id).await, before_leaver, "a wrong confirmation changed something");
+    let (status, _) = call(&app, Method::DELETE, "/me", Some(&token), Some(json!({}))).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "missing confirmation");
+    let (status, _) = call(&app, Method::DELETE, "/me", None, Some(json!({ "confirm_username": "leaver" }))).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "needs a login");
+
+    let (status, body) =
+        call(&app, Method::DELETE, "/me", Some(&token), Some(json!({ "confirm_username": "  LeAvEr " }))).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+
+    // Everything the account owned is gone, in every table that has an owner column.
+    for (table, n) in rows_owned_by(leaver_id).await {
+        assert_eq!(n, 0, "{table} still has rows for the deleted account");
+    }
+    // Nothing of anyone else was touched.
+    assert_eq!(rows_owned_by(other_id).await, before_other);
+
+    // The shared gym they created stays in the directory, no longer tied to them.
+    let created_by: Option<Uuid> = sqlx::query_scalar("select created_by from gyms where id = $1::uuid")
+        .bind(leaver_gym["id"].as_str().unwrap())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(created_by, None);
+
+    // The old tokens stop working at once, not when they expire.
+    let (status, _) = call(&app, Method::GET, "/me", Some(&token), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _) = call(&app, Method::GET, "/workouts", Some(&token), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "reads must not return empty successes for a deleted account");
+    let (status, _) = refresh(&app, &refresh_tok).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "the refresh token must be dead");
+
+    // The username is free again, and signing in creates a fresh, empty account.
+    let (new_token, new_id) = login(&app, "leaver").await;
+    assert_ne!(new_id, leaver_id);
+    let (_, workouts) = get(&app, "/workouts", &new_token).await;
+    assert!(workouts.as_array().unwrap().is_empty());
+}

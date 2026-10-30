@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
     extract::State,
-    http::{HeaderMap, header::USER_AGENT},
+    http::{HeaderMap, StatusCode, header::USER_AGENT},
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use crate::{
 };
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/me", get(me).patch(update_me)).route("/auth/refresh", post(refresh))
+    Router::new().route("/me", get(me).patch(update_me).delete(delete_me)).route("/auth/refresh", post(refresh))
 }
 
 /// Only mounted when `DEV_LOGIN` is on.
@@ -47,6 +47,42 @@ async fn me(State(state): State<AppState>, AuthUser(user_id): AuthUser) -> AppRe
     .await?
     .ok_or(AppError::Unauthorized)?;
     Ok(Json(me))
+}
+
+#[derive(Deserialize)]
+struct DeleteMe {
+    /// Must match the account's username (ignoring case): a deliberate step, and a guard against a
+    /// stray request or a stolen access token deleting everything by itself.
+    confirm_username: String,
+}
+
+/// Permanently deletes the caller's account and everything it owns: workouts and their sets, weigh-ins,
+/// programs, saved gyms, sign-in links and refresh tokens all cascade from the user row. Shared gyms and
+/// exercises the user created stay in the directory without their name on them.
+async fn delete_me(
+    State(state): State<AppState>,
+    AuthUser(user_id): AuthUser,
+    AppJson(body): AppJson<DeleteMe>,
+) -> AppResult<StatusCode> {
+    let mut tx = state.pool.begin().await?;
+    let username = sqlx::query_scalar!(
+        r#"select username::text as "username!" from users where id = $1 and deleted_at is null for update"#,
+        user_id
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(AppError::Unauthorized)?;
+    if !username.eq_ignore_ascii_case(body.confirm_username.trim()) {
+        return Err(AppError::coded(
+            StatusCode::BAD_REQUEST,
+            "username_mismatch",
+            "the username does not match this account",
+        ));
+    }
+    sqlx::query!("delete from users where id = $1", user_id).execute(&mut *tx).await?;
+    tx.commit().await?;
+    tracing::info!(%user_id, "account deleted");
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Omitted fields are left unchanged.

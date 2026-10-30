@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select username::text as \"username!\" from users where id = $1 and deleted_at is null for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "username!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "2e6a71c9ca4fdb2a57255a357838c601138c13424679485c599d5313c7f19bfb"
+}

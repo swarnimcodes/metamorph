@@ -192,6 +192,17 @@ impl FromRequestParts<AppState> for AuthUser {
         if data.claims.typ != ACCESS_TYP {
             return Err(AppError::Unauthorized);
         }
+        // A valid signature is not enough: a deleted account's tokens must stop working at once, not
+        // when they expire.
+        let exists = sqlx::query_scalar!(
+            r#"select exists (select 1 from users where id = $1 and deleted_at is null) as "exists!""#,
+            data.claims.sub
+        )
+        .fetch_one(&state.pool)
+        .await?;
+        if !exists {
+            return Err(AppError::Unauthorized);
+        }
         Ok(AuthUser(data.claims.sub))
     }
 }
