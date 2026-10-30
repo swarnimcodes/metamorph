@@ -2,7 +2,9 @@ import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { useState } from "react";
 import { DeleteAccountSheet } from "../components/DeleteAccountSheet";
+import { ExternalLink } from "../components/ExternalLink";
 import { BUILD_LABEL } from "../lib/build";
+import { PRIVACY_URL } from "../lib/links";
 import type { UnitSystem } from "../api/types";
 import { toastError } from "../lib/toast";
 import { errMsg, useAuth } from "../stores/auth";
@@ -64,6 +66,9 @@ export function You() {
       </section>
       <DeleteAccountSheet open={deleting} onOpenChange={setDeleting} />
 
+      <p className="dim small legal">
+        <ExternalLink href={PRIVACY_URL}>Privacy policy</ExternalLink>
+      </p>
       <p className="dim small build-info">Metamorph {BUILD_LABEL}</p>
     </main>
   );

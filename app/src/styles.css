@@ -497,3 +497,6 @@ a.chip { text-decoration: none; }
 .danger-zone .btn { align-self: flex-start; }
 
 .build-info { text-align: center; margin-top: var(--space-5); font-variant-numeric: tabular-nums; }
+.legal { text-align: center; margin-top: var(--space-4); }
+.legal a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.build-info { margin-top: var(--space-2); }

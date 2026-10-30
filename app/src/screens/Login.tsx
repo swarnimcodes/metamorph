@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import type { GoogleSignupRequired } from "../api/types";
+import { ExternalLink } from "../components/ExternalLink";
 import { GoogleButton } from "../components/GoogleButton";
 import { LogoMark } from "../components/LogoMark";
 import { GOOGLE_CLIENT_ID } from "../lib/google";
+import { PRIVACY_URL } from "../lib/links";
 import { needsSignup } from "../lib/signup";
 import { useAuth, errMsg } from "../stores/auth";
 import { ChooseUsername } from "./ChooseUsername";
@@ -97,6 +99,9 @@ export function Login() {
       ) : (
         !GOOGLE_CLIENT_ID && <p className="dim">No sign-in method is available in this build.</p>
       )}
+        <p className="dim small legal">
+          <ExternalLink href={PRIVACY_URL}>Privacy policy</ExternalLink>
+        </p>
       </div>
     </main>
   );
