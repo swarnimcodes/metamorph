@@ -495,3 +495,5 @@ a.chip { text-decoration: none; }
 .danger-zone { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border); }
 .danger-zone h2 { font-size: 1rem; }
 .danger-zone .btn { align-self: flex-start; }
+
+.build-info { text-align: center; margin-top: var(--space-5); font-variant-numeric: tabular-nums; }
