@@ -1,4 +1,4 @@
-package dev.swarnim.metamorph
+package com.smarniw.metamorph
 
 import android.graphics.Color
 import android.os.Bundle
