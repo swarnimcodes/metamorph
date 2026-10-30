@@ -154,7 +154,7 @@ export const api = {
 
   listWorkouts: (before?: string, limit = 20) =>
     request<WorkoutSummary[]>("GET", "/workouts", { query: { before, limit } }),
-  createWorkout: (body: { title?: string; gym_id?: string }) => request<Workout>("POST", "/workouts", { body }),
+  createWorkout: (body: { title?: string; gym_id?: string; timezone?: string }) => request<Workout>("POST", "/workouts", { body }),
   getWorkout: (id: string) => request<Workout>("GET", `/workouts/${id}`),
   updateWorkout: (id: string, body: { title?: string; gym_id?: string; notes?: string }) =>
     request<Workout>("PATCH", `/workouts/${id}`, { body }),

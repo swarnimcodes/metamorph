@@ -111,6 +111,8 @@ export interface Workout {
   gym: WorkoutGym | null;
   started_at: string;
   ended_at: string | null;
+  /** The zone the workout happened in: show its times in it, and its day is the day there. */
+  timezone: string;
   notes: string | null;
   exercises: WorkoutExercise[];
 }
@@ -122,6 +124,7 @@ export interface WorkoutSummary {
   gym: WorkoutGym | null;
   started_at: string;
   ended_at: string | null;
+  timezone: string;
   exercise_count: number;
   set_count: number;
 }

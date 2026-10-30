@@ -5,6 +5,7 @@ import { changeOver, sinceDays, todayIn, trailingAverage } from "../lib/bodyweig
 import { formatDay } from "../lib/format";
 import { formatTick, formatValue } from "../lib/progress";
 import { deleteBodyWeight, logBodyWeight, useBodyWeights } from "../lib/queries";
+import { deviceTimeZone } from "../lib/timezone";
 import { toastError } from "../lib/toast";
 import { displayToKg, kgToDisplay, weightLabel } from "../lib/units";
 import { useAuth } from "../stores/auth";
@@ -22,7 +23,8 @@ const RANGES = [
 export function BodyWeightCard() {
   const user = useAuth((s) => s.user);
   const unit = user?.unit_system ?? "metric";
-  const timeZone = user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // Today is where the person is now, which is the device, not whatever the profile last recorded.
+  const timeZone = deviceTimeZone();
   const { data: bodyWeights, error: loadError, retry } = useBodyWeights();
   const [open, setOpen] = useState(false);
   const [rangeId, setRangeId] = useState<(typeof RANGES)[number]["id"]>("3m");

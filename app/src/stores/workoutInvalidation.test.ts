@@ -21,7 +21,7 @@ const SET: WorkoutSet = {
   completed_at: null,
 };
 const WORKOUT: Workout = {
-  id: "w1", title: null, gym_id: null, gym: null, started_at: "2026-01-01T09:00:00Z", ended_at: null, notes: null,
+  id: "w1", title: null, gym_id: null, gym: null, started_at: "2026-01-01T09:00:00Z", ended_at: null, timezone: "UTC", notes: null,
   exercises: [{
     id: "we1", exercise_id: "e1", exercise_name: "Bench Press", kind: "weight_reps", position: 1, variant_key: "",
     superset_group: null, notes: null, tags: [], sets: [SET],

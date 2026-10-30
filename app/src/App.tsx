@@ -20,6 +20,15 @@ export default function App() {
     void init();
   }, [init]);
 
+  // The device's zone changes when someone travels; check whenever the app comes back to the front.
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState === "visible") void useAuth.getState().syncTimeZone();
+    };
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+  }, []);
+
   let content;
   if (status === "loading") content = <main className="screen center"><p className="dim">Loading…</p></main>;
   else if (status === "unreachable")

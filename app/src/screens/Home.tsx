@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import { workoutChanged } from "../lib/invalidate";
+import { deviceTimeZone } from "../lib/timezone";
 import { useHistory } from "../lib/queries";
 import { formatDate, formatDuration, formatElapsed, plural } from "../lib/format";
 import { toastError } from "../lib/toast";
@@ -21,7 +22,7 @@ export function Home() {
     setStarting(true);
     try {
       // The server starts the workout at the gym of your last one.
-      const w = await api.createWorkout({});
+      const w = await api.createWorkout({ timezone: deviceTimeZone() });
       void workoutChanged();
       navigate(paths.workout(w.id));
     } catch (e) {
@@ -66,7 +67,7 @@ export function Home() {
               <button className="card row-btn" onClick={() => navigate(paths.detail(w.id))}>
                 <span className="card-title">{w.title || "Workout"}</span>
                 <span className="dim">
-                  {formatDate(w.started_at)}
+                  {formatDate(w.started_at, w.timezone)}
                   {w.ended_at && ` · ${formatDuration(w.started_at, w.ended_at)}`}
                   {gym && ` · ${gym}`}
                 </span>

@@ -3,6 +3,7 @@ import { api, ApiError, setSessionExpiredHandler, storeLogin } from "../api/clie
 import { clearSession, loadSession } from "../api/tokenStorage";
 import { disableGoogleAutoSelect } from "../lib/google";
 import { clearAll } from "../lib/invalidate";
+import { deviceTimeZone, zoneNeedsSync } from "../lib/timezone";
 import type { LoginResponse, Me, MeUpdate } from "../api/types";
 
 type Status = "loading" | "signed-out" | "signed-in" | "unreachable";
@@ -20,10 +21,27 @@ interface AuthState {
   /** Dev-only username login. Google sign-in calls completeLogin() with its own response. */
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
+  /**
+   * Make the profile's zone the device's, if it has fallen behind (a new account starts as UTC; a
+   * traveller lands somewhere else). The profile zone only decides what "today" and "this week" mean:
+   * every workout keeps the zone it was done in, so nothing already logged changes day.
+   */
+  syncTimeZone: () => Promise<void>;
   /** Deletes the account for good, then signs out. Throws if the server refuses (e.g. wrong username). */
   deleteAccount: (confirmUsername: string) => Promise<void>;
   /** PATCH /me; the returned profile replaces the stored user so every screen re-renders. */
   updateProfile: (patch: MeUpdate) => Promise<void>;
+}
+
+/** The profile with its zone brought up to the device's. A failed update leaves it as it was: not worth failing a sign-in over. */
+async function alignZone(user: Me): Promise<Me> {
+  const zone = deviceTimeZone();
+  if (!zoneNeedsSync(user.timezone, zone)) return user;
+  try {
+    return await api.updateMe({ timezone: zone });
+  } catch {
+    return user;
+  }
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -35,7 +53,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   init: async () => {
     if (!loadSession()) return set({ status: "signed-out" });
     try {
-      set({ status: "signed-in", user: await api.me(), error: null });
+      set({ status: "signed-in", user: await alignZone(await api.me()), error: null });
     } catch (e) {
       // A 401 already triggered logout via the session-expired handler.
       if (e instanceof ApiError && e.status === 0) set({ status: "unreachable", error: e.message });
@@ -46,7 +64,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   completeLogin: async (r) => {
     clearAll(); // whoever was here before, none of their data is shown to this account
     storeLogin(r);
-    set({ user: await api.me(), status: "signed-in", error: null, notice: null });
+    set({ user: await alignZone(await api.me()), status: "signed-in", error: null, notice: null });
   },
 
   devLogin: async (username) => {
@@ -58,6 +76,13 @@ export const useAuth = create<AuthState>((set, get) => ({
     clearSession();
     clearAll();
     set({ status: "signed-out", user: null });
+  },
+
+  syncTimeZone: async () => {
+    const user = get().user;
+    if (get().status !== "signed-in" || !user) return;
+    const next = await alignZone(user);
+    if (next !== user && get().user?.id === user.id) set({ user: next });
   },
 
   deleteAccount: async (confirmUsername) => {

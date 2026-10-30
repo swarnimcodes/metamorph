@@ -40,7 +40,7 @@ export function WorkoutDetail({ id }: { id: string }) {
           <header className="stack-sm">
             <h1>{w.title || "Workout"}</h1>
             <p className="dim">
-              {formatDate(w.started_at)} · {formatTime(w.started_at)}
+              {formatDate(w.started_at, w.timezone)} · {formatTime(w.started_at, w.timezone)}
               {w.ended_at && ` · ${formatDuration(w.started_at, w.ended_at)}`}
               {w.gym && ` · ${w.gym.name}`}
             </p>

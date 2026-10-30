@@ -1,4 +1,5 @@
 import type { WorkoutSet } from "../api/types";
+import { deviceTimeZone } from "./timezone";
 
 export function formatElapsed(fromIso: string, toMs: number): string {
   const s = Math.max(0, Math.floor((toMs - new Date(fromIso).getTime()) / 1000));
@@ -13,15 +14,31 @@ export function formatDuration(startIso: string, endIso: string): string {
   return mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`;
 }
 
-export function formatDate(iso: string): string {
+/**
+ * The date of a moment as it was where it happened. Pass the workout's own `timeZone`: without one the
+ * device's current zone is used, which is wrong for a workout done somewhere else.
+ */
+export function formatDate(iso: string, timeZone?: string, now: Date = new Date()): string {
   const d = new Date(iso);
-  const opts: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" };
-  if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  const year = (x: Date) => Number(new Intl.DateTimeFormat("en", { year: "numeric", timeZone }).format(x));
+  const opts: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short", timeZone };
+  if (year(d) !== year(now)) opts.year = "numeric";
   return d.toLocaleDateString(undefined, opts);
 }
 
-export const formatTime = (iso: string): string =>
-  new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+/**
+ * The clock time as it was where it happened. When that is not where the device is now, the zone's short
+ * name is added ("9:00 PM PST"), so a workout from a trip does not read as if it happened at home.
+ */
+export function formatTime(iso: string, timeZone?: string, deviceZone: string = deviceTimeZone()): string {
+  const elsewhere = !!timeZone && timeZone !== deviceZone;
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+    ...(elsewhere ? { timeZoneName: "short" } : {}),
+  });
+}
 
 export const plural = (n: number, one: string, many = one + "s"): string => `${n} ${n === 1 ? one : many}`;
 
