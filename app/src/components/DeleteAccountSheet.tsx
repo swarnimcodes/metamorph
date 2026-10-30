@@ -50,7 +50,9 @@ export function DeleteAccountSheet({ open, onOpenChange }: { open: boolean; onOp
           Gyms and exercises you added to the shared directory stay, without your name on them.
         </p>
         <label className="field">
-          Type your username <strong>{username}</strong> to confirm
+          <span>
+            Type your username <strong>{username}</strong> to confirm
+          </span>
           <input
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
