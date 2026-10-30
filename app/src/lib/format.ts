@@ -1,5 +1,5 @@
 import type { WorkoutSet } from "../api/types";
-import { deviceTimeZone } from "./timezone";
+import { deviceTimeZone, sameClock } from "./timezone";
 
 export function formatElapsed(fromIso: string, toMs: number): string {
   const s = Math.max(0, Math.floor((toMs - new Date(fromIso).getTime()) / 1000));
@@ -27,12 +27,13 @@ export function formatDate(iso: string, timeZone?: string, now: Date = new Date(
 }
 
 /**
- * The clock time as it was where it happened. When that is not where the device is now, the zone's short
- * name is added ("9:00 PM PST"), so a workout from a trip does not read as if it happened at home.
+ * The clock time as it was where it happened. When the device's clock is different from that one, the
+ * zone's short name is added ("9:00 PM PST"), so a workout from a trip does not read as if it happened at home.
  */
 export function formatTime(iso: string, timeZone?: string, deviceZone: string = deviceTimeZone()): string {
-  const elsewhere = !!timeZone && timeZone !== deviceZone;
-  return new Date(iso).toLocaleTimeString(undefined, {
+  const moment = new Date(iso);
+  const elsewhere = !!timeZone && !sameClock(moment, timeZone, deviceZone);
+  return moment.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
     timeZone,

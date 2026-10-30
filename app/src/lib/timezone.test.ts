@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatDate, formatTime } from "./format";
-import { deviceTimeZone, zoneNeedsSync } from "./timezone";
+import { deviceTimeZone, sameClock, utcOffsetMinutes, zoneNeedsSync } from "./timezone";
 
 describe("deviceTimeZone", () => {
   it("is a real zone the platform accepts", () => {
@@ -49,5 +49,40 @@ describe("a moment is shown as it was where it happened", () => {
   it("names the zone only when it is not where the device is now", () => {
     expect(formatTime(MOMENT, "America/Los_Angeles", "Asia/Kolkata")).toMatch(/PST|GMT-8/);
     expect(formatTime(MOMENT, "America/Los_Angeles", "America/Los_Angeles")).not.toMatch(/PST|GMT/);
+  });
+});
+
+describe("sameClock", () => {
+  const winter = new Date("2026-01-05T20:00:00Z");
+  const summer = new Date("2026-07-05T20:00:00Z");
+
+  it("treats a zone and its old alias as the same clock", () => {
+    expect(sameClock(winter, "Asia/Kolkata", "Asia/Calcutta")).toBe(true);
+  });
+  it("treats different zones that agree at that moment as the same clock", () => {
+    expect(sameClock(winter, "America/Vancouver", "America/Los_Angeles")).toBe(true);
+    expect(sameClock(winter, "Europe/London", "Africa/Abidjan")).toBe(true);
+  });
+  it("tells apart zones whose clocks differ", () => {
+    expect(sameClock(winter, "America/Los_Angeles", "Asia/Kolkata")).toBe(false);
+    expect(sameClock(winter, "Asia/Kolkata", "Asia/Kathmandu")).toBe(false); // +5:30 vs +5:45
+  });
+  it("compares at the moment in question, so daylight saving counts", () => {
+    expect(sameClock(winter, "Europe/London", "Europe/Paris")).toBe(false);
+    expect(sameClock(summer, "America/New_York", "America/Toronto")).toBe(true);
+    expect(sameClock(winter, "Europe/London", "UTC")).toBe(true);
+    expect(sameClock(summer, "Europe/London", "UTC")).toBe(false);
+  });
+  it("reads offsets including half hours and negatives", () => {
+    expect(utcOffsetMinutes(winter, "Asia/Kolkata")).toBe(330);
+    expect(utcOffsetMinutes(winter, "America/Los_Angeles")).toBe(-480);
+    expect(utcOffsetMinutes(winter, "UTC")).toBe(0);
+    expect(utcOffsetMinutes(winter, "Not/AZone")).toBeNull();
+  });
+});
+
+describe("formatTime and zone aliases", () => {
+  it("adds no zone name to a workout done in the device's own zone, whatever it is called", () => {
+    expect(formatTime("2026-01-05T20:00:00Z", "Asia/Kolkata", "Asia/Calcutta")).not.toMatch(/IST|GMT/);
   });
 });
