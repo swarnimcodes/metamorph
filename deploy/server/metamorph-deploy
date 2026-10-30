@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Installs a new build on the server and rolls back if it does not come up healthy.
+#
+# Lives at /usr/local/sbin/metamorph-deploy, owned by root. The CI user may run it through sudo and nothing else
+# (see setup-ci-deploy.sh). It reads the two files CI uploaded to that user's inbox:
+#   metamorph-api   the API binary
+#   web.tar.gz      the built web app
+#
+# Rolling back puts the previous binary and web files back. It cannot undo database migrations the new
+# version already ran: those are additive here, and the previous binary keeps working against them.
+set -euo pipefail
+
+INBOX="${MM_INBOX:-/home/deploy/incoming}"
+BIN="${MM_BIN:-/usr/local/bin/metamorph-api}"
+WEB="${MM_WEB:-/var/www/metamorph}"
+SERVICE="${MM_SERVICE:-metamorph-api}"
+HEALTH_URL="${MM_HEALTH_URL:-http://127.0.0.1:3000/health}"
+WAIT_SECS="${MM_WAIT_SECS:-30}"
+LOCK="${MM_LOCK:-/run/lock/metamorph-deploy.lock}"
+
+# One deploy at a time.
+exec 9>"$LOCK"
+flock -n 9 || { echo "another deploy is running" >&2; exit 1; }
+
+NEW_BIN="$INBOX/metamorph-api"
+NEW_WEB="$INBOX/web.tar.gz"
+
+# Refuse anything that does not look like what CI builds, before touching the live files.
+[ -f "$NEW_BIN" ] && [ -f "$NEW_WEB" ] || { echo "nothing to deploy in $INBOX" >&2; exit 1; }
+[ "$(head -c 4 "$NEW_BIN" | od -An -c | tr -d ' \n')" = '177ELF' ] || { echo "the binary is not an ELF executable" >&2; exit 1; }
+tar -tzf "$NEW_WEB" | grep -qx './index.html' || { echo "the web archive has no index.html" >&2; exit 1; }
+
+restore_contexts() { command -v restorecon >/dev/null && restorecon -R "$BIN" "$WEB" || true; }
+
+healthy() {
+  local i
+  for ((i = 0; i < WAIT_SECS; i++)); do
+    if curl -fsS --max-time 3 "$HEALTH_URL" >/dev/null 2>&1 && systemctl is-active --quiet "$SERVICE"; then return 0; fi
+    sleep 1
+  done
+  return 1
+}
+
+# Keep what is running now, to go back to.
+cp -p "$BIN" "$BIN.prev"
+rm -rf "$WEB.prev"; cp -a "$WEB" "$WEB.prev"
+
+install -m 0755 "$NEW_BIN" "$BIN"
+find "$WEB" -mindepth 1 -delete
+tar -xzf "$NEW_WEB" -C "$WEB"
+restore_contexts
+systemctl restart "$SERVICE"
+
+if healthy; then
+  rm -f "$NEW_BIN" "$NEW_WEB"
+  echo "deployed: $SERVICE is healthy"
+  exit 0
+fi
+
+echo "the new version did not become healthy within ${WAIT_SECS}s: rolling back" >&2
+install -m 0755 "$BIN.prev" "$BIN"
+find "$WEB" -mindepth 1 -delete
+cp -a "$WEB.prev/." "$WEB/"
+restore_contexts
+systemctl restart "$SERVICE"
+if healthy; then echo "ROLLED BACK: the previous version is healthy again" >&2; else echo "ROLLED BACK but the service is still unhealthy: look at it now" >&2; fi
+exit 1
