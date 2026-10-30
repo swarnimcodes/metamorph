@@ -1,0 +1,122 @@
+name: CI
+
+# Every push to main and every pull request is tested. A push to main can also deploy, once the repository
+# variable AUTO_DEPLOY is "true"; that step waits for approval on the "production" environment.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A newer push to a branch replaces the older run, but never cancels a run on main that may be deploying.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  backend:
+    name: Backend (clippy and tests)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        # The schema uses uuidv7(), which exists from Postgres 18.
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # Queries are checked against the committed .sqlx cache, so building needs no database. That also fails the
+      # build when a query changed and `cargo sqlx prepare` was not re-run. The tests make their own databases.
+      SQLX_OFFLINE: "true"
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy -p metamorph-api --all-targets -- -D warnings
+      - run: cargo test -p metamorph-api
+
+  frontend:
+    name: Web app (types, build and tests)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build # type-checks, then bundles
+      - run: pnpm test
+
+  scripts:
+    name: Release and deploy scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/test-changelog.sh
+      - run: scripts/test-release-notes.sh
+      - run: deploy/server/test-metamorph-deploy.sh
+      - name: Shell syntax
+        run: |
+          for f in scripts/*.sh deploy/*.sh deploy/server/*; do
+            case "$f" in *.sh | */metamorph-deploy) bash -n "$f" ;; esac
+          done
+
+  deploy:
+    name: Deploy to the server
+    needs: [backend, frontend, scripts]
+    # Off until the repository variable AUTO_DEPLOY is "true". Never on a pull request.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTO_DEPLOY == 'true'
+    runs-on: ubuntu-24.04
+    # Holds the deploy secrets and, if you set required reviewers on it, waits for your approval.
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Google client id for the web build
+        env:
+          CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          test -n "$CLIENT_ID" || { echo "the repository variable VITE_GOOGLE_CLIENT_ID is not set: sign-in would be missing from the site"; exit 1; }
+          echo "VITE_GOOGLE_CLIENT_ID=$CLIENT_ID" > app/.env.local
+      - name: Build the API (Fedora container, same glibc as the server) and the web app
+        run: ./deploy/build.sh
+      - name: Prepare the connection
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$KEY" && test -n "$KNOWN_HOSTS" || { echo "DEPLOY_SSH_KEY and DEPLOY_KNOWN_HOSTS must be set"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload, restart, check health (rolls back if the new version is not healthy)
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+        run: ./deploy/ci-push.sh "deploy@$HOST" https://metamorph.smarniw.com

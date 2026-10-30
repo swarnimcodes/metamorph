@@ -1,0 +1,189 @@
+name: Release
+
+# Publishes a GitHub release with a signed Android APK and a changelog whenever the app version in
+# app/src-tauri/tauri.conf.json changes on main, which is what a "Bump the version to ..." commit does.
+# It stays off until the repository variable AUTO_RELEASE is "true". Run it by hand from the Actions tab with
+# "publish" turned off to check the Android build works on a runner without signing or releasing anything.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - app/src-tauri/tauri.conf.json
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Sign with the release key and publish a release (turn off to only test the build)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Is there something to release?
+    if: vars.AUTO_RELEASE == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      publish: ${{ steps.ver.outputs.publish }}
+      run: ${{ steps.ver.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+      - id: ver
+        env:
+          PUBLISH: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+        run: |
+          version=$(jq -r .version app/src-tauri/tauri.conf.json)
+          tag="v$version"
+          exists=false
+          git rev-parse -q --verify "refs/tags/$tag" >/dev/null && exists=true
+          # Build when publishing a version that has no release yet, or on a test run (which publishes nothing).
+          run=false
+          if [ "$PUBLISH" = true ] && [ "$exists" = false ]; then run=true; fi
+          if [ "$PUBLISH" = false ]; then run=true; fi
+          if [ "$run" = false ]; then echo "::notice::$tag is already released; nothing to do"; fi
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "publish=$PUBLISH"
+            echo "run=$run"
+          } >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Build and publish
+    needs: check
+    if: needs.check.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # Holds the signing key. Add required reviewers to this environment to approve each release.
+    environment: release
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      TAG: ${{ needs.check.outputs.tag }}
+      PUBLISH: ${{ needs.check.outputs.publish }}
+      PACKAGE: com.smarniw.metamorph
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the changelog reads the history since the last release
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools platforms;android-37.0 platforms;android-36 build-tools;37.0.0 ndk;30.0.14904198"
+      - name: Point the Tauri build at the NDK
+        run: echo "NDK_HOME=$ANDROID_HOME/ndk/30.0.14904198" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - name: Install web dependencies
+        working-directory: app
+        run: pnpm install --frozen-lockfile
+
+      - name: Google client id (the app is useless without sign-in)
+        env:
+          CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          test -n "$CLIENT_ID" || { echo "the repository variable VITE_GOOGLE_CLIENT_ID is not set: the app would be built without Google sign-in"; exit 1; }
+          echo "VITE_GOOGLE_CLIENT_ID=$CLIENT_ID" > app/.env.local
+
+      - name: Signing key
+        if: env.PUBLISH == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
+        run: |
+          test -n "$KEYSTORE_B64" && test -n "$KEYSTORE_PASSWORD" || { echo "ANDROID_KEYSTORE_B64 and ANDROID_KEYSTORE_PASSWORD must be set"; exit 1; }
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "MM_KEYSTORE=$RUNNER_TEMP/release.jks"
+            echo "MM_KEY_ALIAS=${KEY_ALIAS:-metamorph}"
+            printf 'MM_KEYSTORE_PASSWORD=%q\n' "$KEYSTORE_PASSWORD"
+          } > "$RUNNER_TEMP/signing.env"
+          chmod 600 "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/signing.env"
+          echo "MM_SIGNING_ENV=$RUNNER_TEMP/signing.env" >> "$GITHUB_ENV"
+
+      - name: Build and sign the APK and the Play bundle
+        if: env.PUBLISH == 'true'
+        run: |
+          ./deploy/android-release.sh
+          ./deploy/android-release.sh aab
+
+      - name: Build the APK, unsigned (test run)
+        if: env.PUBLISH != 'true'
+        working-directory: app
+        run: |
+          pnpm tauri android build --apk --target aarch64
+          mkdir -p ../deploy/out
+          cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk ../deploy/out/Metamorph-unsigned.apk
+
+      - name: Check what was built
+        run: |
+          apk=deploy/out/Metamorph.apk
+          [ "$PUBLISH" = true ] || apk=deploy/out/Metamorph-unsigned.apk
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          badging=$("$aapt2" dump badging "$apk")
+          echo "$badging" | head -1
+          echo "$badging" | grep -q "^package: name='$PACKAGE'" || { echo "unexpected package name"; exit 1; }
+          echo "$badging" | grep -q "versionName='$VERSION'" || { echo "the APK's version is not $VERSION"; exit 1; }
+          echo "$badging" | grep -q "native-code: 'arm64-v8a'" || { echo "no arm64 code in the APK"; exit 1; }
+
+      - name: Write the release notes
+        if: env.PUBLISH == 'true'
+        run: |
+          cert=$("$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)" verify --print-certs deploy/out/Metamorph.apk \
+                 | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+          test -n "$cert" || { echo "could not read the signing certificate"; exit 1; }
+          prev=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          echo "previous release: ${prev:-none}"
+          CERT_SHA256="$cert" scripts/release-notes.sh "$VERSION" deploy/out/Metamorph.apk "$prev" HEAD > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+          cp deploy/out/Metamorph.apk "$RUNNER_TEMP/Metamorph-$VERSION-arm64.apk"
+
+      - name: Keep the Play bundle and the APK as workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-${{ env.VERSION }}
+          path: |
+            deploy/out/*.apk
+            deploy/out/*.aab
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish the release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          [[ "$VERSION" == 0.* ]] && flags+=(--prerelease)
+          title="Metamorph $VERSION"
+          [[ "$VERSION" == 0.* ]] && title="$title (pre-release)"
+          gh release create "$TAG" "$RUNNER_TEMP/Metamorph-$VERSION-arm64.apk" \
+            --target "$GITHUB_SHA" --title "$title" --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
