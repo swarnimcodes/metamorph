@@ -73,6 +73,7 @@ jobs:
       - uses: actions/checkout@v7
       - run: scripts/test-changelog.sh
       - run: scripts/test-release-notes.sh
+      - run: scripts/check-icons.sh
       - run: deploy/server/test-metamorph-deploy.sh
       - name: Shell syntax
         run: |
