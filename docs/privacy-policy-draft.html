@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  DRAFT. Not served: it lives in docs/. To publish, resolve the [CONFIRM] items, remove this comment and
+  the draft banner, then move it to app/public/privacy.html (served at /privacy.html after a deploy).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Metamorph privacy policy</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #121316; color: #e8e9eb; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+    h1 { font-size: 1.6rem; margin: 0 0 0.25rem; }
+    h2 { font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+    p, li { color: #c4c7cc; }
+    ul { padding-left: 1.25rem; }
+    a { color: #7fb0ff; }
+    .note { color: #8d929a; font-size: 0.9rem; }
+    .draft { background: #3a2f12; border: 1px solid #6b5524; color: #f5d98b; padding: 0.6rem 0.8rem; border-radius: 8px; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="draft"><strong>DRAFT</strong> — contains [CONFIRM] items. Do not publish as is.</p>
+  <h1>Metamorph privacy policy</h1>
+  <p class="note">Effective 30 October 2026. Applies to the Metamorph Android app and the website at metamorph.smarniw.com.</p>
+
+  <p>Metamorph is a gym workout tracker run by an individual developer. This page explains what it collects, why,
+  and how you can delete it. Questions: <a href="mailto:swarnim335@gmail.com">swarnim335@gmail.com</a>.</p>
+
+  <h2>What Metamorph collects</h2>
+  <p><strong>From your Google account, when you sign in:</strong> your email address, your name, a link to your
+  profile picture, and Google's identifier for your account. Metamorph never sees your Google password.</p>
+  <p><strong>What you enter:</strong></p>
+  <ul>
+    <li>a username you choose, and your preferences (weight unit, time zone),</li>
+    <li>your workouts: exercises, sets, weights, reps, durations, distances, reps in reserve, and notes,</li>
+    <li>your body weight entries,</li>
+    <li>the gym a workout was at.</li>
+  </ul>
+  <p><strong>Gyms you add</strong> (name, area, city, address, and a maps link if you give one) go into a shared
+  directory that every Metamorph user can see. Do not enter a home address there. Your workouts and body weight
+  are visible only to you.</p>
+  <p><strong>Automatically:</strong> to keep you signed in, Metamorph stores a session on your device and a
+  protected record of it on the server, along with the type of browser or device that signed in and when.</p>
+  <p><strong>What it does not collect:</strong> your location, contacts, photos, camera, microphone, or advertising
+  ID. The Android app asks only for permission to use the internet. There is no advertising and no analytics or
+  tracking software in the app.</p>
+
+  <h2>How it is used</h2>
+  <p>Only to run the app: to sign you in, store your training, and show you your history and progress. It is not
+  sold, rented, or used for advertising.</p>
+
+  <h2>Who else handles it</h2>
+  <ul>
+    <li><strong>Google</strong> provides the sign-in. It learns that you signed in to Metamorph. See Google's own privacy policy.</li>
+    <li><strong>DigitalOcean</strong> hosts the server and database.</li>
+    <li><strong>Cloudflare</strong> sits in front of the website and the API to deliver and protect traffic, so it
+    sees connection details such as your IP address.</li>
+  </ul>
+  <p>"Directions" buttons open your maps app or browser. Metamorph does not send your location anywhere. Your
+  data is shared with no one else, except where the law requires it.</p>
+
+  <h2>How long it is kept, and deleting it</h2>
+  <p>Your data is kept for as long as you have an account. You can delete your account and everything in it at any
+  time, from the app (You tab → Delete my account) or from the website; see
+  <a href="/account-deletion.html">how to delete your account</a>. Deletion is immediate and permanent: it removes
+  your data from the live database. Gyms you added to the shared directory stay, no longer linked to you.</p>
+  <p>[CONFIRM: backups. Either "I do not keep database backups" or "Backups are kept for N days and are not edited
+  when an account is deleted; your data leaves them when they expire".]</p>
+  <p>The application server records errors and warnings only, not a log of what you do in the app. Cloudflare and
+  DigitalOcean keep their own technical logs under their own policies.</p>
+
+  <h2>Security</h2>
+  <p>All traffic uses HTTPS. Sign-in tokens are stored on your device and are removed when you log out or delete your
+  account.</p>
+
+  <h2>Children</h2>
+  <p>Metamorph is not directed at children under 13, and you need a Google account to use it.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the date at the top changes with it. Material changes will also be announced in the app.</p>
+</main>
+</body>
+</html>
