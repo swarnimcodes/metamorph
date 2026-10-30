@@ -1,7 +1,7 @@
 //! A daily weigh-in log: one entry per user per local calendar day.
 //!
 //! The client sends the date in the user's own timezone, so there is no timezone
-//! conversion here; a day cannot be in the future for that user.
+//! conversion here; a day cannot be later than the latest local date anywhere (UTC+14).
 
 use axum::{
     Json, Router,
@@ -94,14 +94,13 @@ async fn upsert(
         return Err(AppError::BadRequest("weight_kg must be between 0 and 500".into()));
     }
 
-    let today = sqlx::query_scalar!(
-        r#"select (now() at time zone timezone)::date as "today!" from users where id = $1 and deleted_at is null"#,
-        user_id
-    )
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or(AppError::Unauthorized)?;
-    if day > today {
+    // The date is the person's own local date, from wherever their device is. The furthest ahead any
+    // local date can be is UTC+14, so that is the limit: a traveller already on tomorrow's date is fine,
+    // and only a date that cannot exist anywhere yet is refused.
+    let latest_local_date = sqlx::query_scalar!(r#"select (now() at time zone 'Etc/GMT-14')::date as "d!""#)
+        .fetch_one(&state.pool)
+        .await?;
+    if day > latest_local_date {
         return Err(AppError::BadRequest("date cannot be in the future".into()));
     }
 

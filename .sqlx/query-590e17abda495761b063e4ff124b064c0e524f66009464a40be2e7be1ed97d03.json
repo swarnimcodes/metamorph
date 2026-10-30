@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select distinct (w.started_at at time zone coalesce(w.timezone, $2::text))::date as \"d!\"\n             from workouts w\n            where w.user_id = $1 and w.deleted_at is null\n              and exists (select 1 from workout_exercises we join sets s on s.workout_exercise_id = we.id\n                           where we.workout_id = w.id and we.deleted_at is null and s.deleted_at is null)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "d!",
+        "type_info": "Date",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "590e17abda495761b063e4ff124b064c0e524f66009464a40be2e7be1ed97d03"
+}

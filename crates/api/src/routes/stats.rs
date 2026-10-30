@@ -131,7 +131,7 @@ async fn consistency(
 
     let rows = sqlx::query!(
         r#"with w as (
-               select id, (started_at at time zone $2::text)::date as d
+               select id, (started_at at time zone coalesce(timezone, $2::text))::date as d
                  from workouts
                 where user_id = $1 and deleted_at is null
                   and exists (select 1 from workout_exercises we join sets s on s.workout_exercise_id = we.id
@@ -172,7 +172,7 @@ async fn consistency(
 
     // The longest streak is over all history, not just the window above.
     let active_weeks: BTreeSet<i64> = sqlx::query_scalar!(
-        r#"select distinct (w.started_at at time zone $2::text)::date as "d!"
+        r#"select distinct (w.started_at at time zone coalesce(w.timezone, $2::text))::date as "d!"
              from workouts w
             where w.user_id = $1 and w.deleted_at is null
               and exists (select 1 from workout_exercises we join sets s on s.workout_exercise_id = we.id
@@ -239,7 +239,7 @@ async fn logged_exercises(
         r#"select c.id as "exercise_id!", c.name as "name!", c.kind as "kind!: ExerciseKind",
                   we.variant_key as "variant_key!",
                   count(distinct w.id) as "sessions!",
-                  (max(w.started_at) at time zone $2::text)::date as "last_performed!"
+                  ((array_agg(w.started_at at time zone coalesce(w.timezone, $2::text) order by w.started_at desc))[1])::date as "last_performed!"
              from workout_exercises we
              join workouts w on w.id = we.workout_id
              join exercises e on e.id = we.exercise_id
@@ -400,7 +400,7 @@ async fn progress(
     .ok_or(AppError::NotFound)?;
 
     let rows = sqlx::query!(
-        r#"select w.id as workout_id, (w.started_at at time zone $3::text)::date as "date!",
+        r#"select w.id as workout_id, (w.started_at at time zone coalesce(w.timezone, $3::text))::date as "date!",
                   s.weight_kg, s.reps, s.duration_s, s.distance_m
              from workout_exercises we
              join workouts w on w.id = we.workout_id

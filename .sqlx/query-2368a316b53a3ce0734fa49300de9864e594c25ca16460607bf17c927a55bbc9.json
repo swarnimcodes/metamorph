@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into workouts (user_id, title, gym_id, notes, started_at, timezone)\n           values ($1, $2,\n                   coalesce($3, (select w.gym_id from workouts w\n                                  join gyms g on g.id = w.gym_id and g.deleted_at is null\n                                 where w.user_id = $1 and w.deleted_at is null\n                                 order by w.started_at desc limit 1)),\n                   $4, coalesce($5, now()),\n                   coalesce($6, (select timezone from users where id = $1)))\n           returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workouts",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Text",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2368a316b53a3ce0734fa49300de9864e594c25ca16460607bf17c927a55bbc9"
+}

@@ -104,16 +104,10 @@ async fn update_me(
     {
         return Err(AppError::BadRequest("display_name must be 1-80 characters".into()));
     }
-    if let Some(tz) = &body.timezone {
-        let known = sqlx::query_scalar!(
-            r#"select exists (select 1 from pg_timezone_names where name = $1) as "known!""#,
-            tz
-        )
-        .fetch_one(&state.pool)
-        .await?;
-        if !known {
-            return Err(AppError::BadRequest("unknown timezone".into()));
-        }
+    if let Some(tz) = &body.timezone
+        && !super::known_timezone(&state.pool, tz).await?
+    {
+        return Err(AppError::BadRequest("unknown timezone".into()));
     }
 
     let me = sqlx::query_as!(

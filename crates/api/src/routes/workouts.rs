@@ -113,6 +113,8 @@ pub struct WorkoutOut {
     started_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339::option")]
     ended_at: Option<OffsetDateTime>,
+    /// The zone this workout happened in; clients show its times in it.
+    timezone: String,
     notes: Option<String>,
     exercises: Vec<WorkoutExerciseOut>,
 }
@@ -127,6 +129,7 @@ pub struct WorkoutSummary {
     started_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339::option")]
     ended_at: Option<OffsetDateTime>,
+    timezone: String,
     exercise_count: i64,
     set_count: i64,
 }
@@ -135,8 +138,10 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
     let w = sqlx::query!(
         r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.area as "gym_area?", g.city as "gym_city?",
                   g.lat as "gym_lat?", g.lng as "gym_lng?", g.maps_url as "gym_maps_url?",
-                  w.started_at, w.ended_at, w.notes
+                  w.started_at, w.ended_at, w.notes,
+                  coalesce(w.timezone, u.timezone) as "timezone!"
              from workouts w
+             join users u on u.id = w.user_id
              left join gyms g on g.id = w.gym_id
             where w.id = $1 and w.user_id = $2 and w.deleted_at is null"#,
         id,
@@ -225,6 +230,7 @@ async fn load_workout(pool: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Worko
         }),
         started_at: w.started_at,
         ended_at: w.ended_at,
+        timezone: w.timezone,
         notes: w.notes,
         exercises: exercises
             .into_iter()
@@ -315,6 +321,8 @@ struct CreateWorkout {
     notes: Option<String>,
     #[serde(default, with = "time::serde::rfc3339::option")]
     started_at: Option<OffsetDateTime>,
+    /// The device's IANA zone. Absent: the account's zone is recorded instead, so a workout always has one.
+    timezone: Option<String>,
 }
 
 async fn create(
@@ -322,22 +330,30 @@ async fn create(
     AuthUser(user_id): AuthUser,
     AppJson(body): AppJson<CreateWorkout>,
 ) -> AppResult<(StatusCode, Json<WorkoutOut>)> {
+    if let Some(tz) = &body.timezone
+        && !super::known_timezone(&state.pool, tz).await?
+    {
+        return Err(AppError::BadRequest("unknown timezone".into()));
+    }
     // No gym given: start where the caller last trained. The join means a gym-less workout never
-    // matches, so one in between does not reset it.
+    // matches, so one in between does not reset it. The time zone is the device's, or failing that
+    // the account's: every new workout records the zone it happened in.
     let id = sqlx::query_scalar!(
-        r#"insert into workouts (user_id, title, gym_id, notes, started_at)
+        r#"insert into workouts (user_id, title, gym_id, notes, started_at, timezone)
            values ($1, $2,
                    coalesce($3, (select w.gym_id from workouts w
                                   join gyms g on g.id = w.gym_id and g.deleted_at is null
                                  where w.user_id = $1 and w.deleted_at is null
                                  order by w.started_at desc limit 1)),
-                   $4, coalesce($5, now()))
+                   $4, coalesce($5, now()),
+                   coalesce($6, (select timezone from users where id = $1)))
            returning id"#,
         user_id,
         body.title,
         body.gym_id,
         body.notes,
-        body.started_at
+        body.started_at,
+        body.timezone
     )
     .fetch_one(&state.pool)
     .await?;
@@ -361,7 +377,7 @@ async fn list(
     let rows = sqlx::query!(
         r#"select w.id, w.title, w.gym_id, g.name as "gym_name?", g.area as "gym_area?", g.city as "gym_city?",
                   g.lat as "gym_lat?", g.lng as "gym_lng?", g.maps_url as "gym_maps_url?",
-                  w.started_at, w.ended_at,
+                  w.started_at, w.ended_at, coalesce(w.timezone, u.timezone) as "timezone!",
                   (select count(*) from workout_exercises we
                     where we.workout_id = w.id and we.deleted_at is null) as "exercise_count!",
                   (select count(*) from sets s
@@ -369,6 +385,7 @@ async fn list(
                     where we.workout_id = w.id and we.deleted_at is null
                       and s.deleted_at is null) as "set_count!"
              from workouts w
+             join users u on u.id = w.user_id
              left join gyms g on g.id = w.gym_id
             where w.user_id = $1 and w.deleted_at is null
               and ($2::timestamptz is null or w.started_at < $2)
@@ -397,6 +414,7 @@ async fn list(
             }),
             started_at: r.started_at,
             ended_at: r.ended_at,
+            timezone: r.timezone,
             exercise_count: r.exercise_count,
             set_count: r.set_count,
         })

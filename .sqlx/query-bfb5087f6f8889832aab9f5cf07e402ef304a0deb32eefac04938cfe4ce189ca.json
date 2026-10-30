@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select (now() at time zone 'Etc/GMT-14')::date as \"d!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "d!",
+        "type_info": "Date",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "bfb5087f6f8889832aab9f5cf07e402ef304a0deb32eefac04938cfe4ce189ca"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select w.id as workout_id, (w.started_at at time zone $3::text)::date as \"date!\",\n                  s.weight_kg, s.reps, s.duration_s, s.distance_m\n             from workout_exercises we\n             join workouts w on w.id = we.workout_id\n             join sets s on s.workout_exercise_id = we.id\n            where w.user_id = $1 and w.deleted_at is null\n              and we.deleted_at is null and s.deleted_at is null and s.set_type <> 'warmup'\n              and we.exercise_id in (select id from exercises where id = $2 or merged_into_id = $2)\n              and ($4::text is null or we.variant_key = $4)\n            order by w.started_at, w.id, we.position, s.position",
+  "query": "select w.id as workout_id, (w.started_at at time zone coalesce(w.timezone, $3::text))::date as \"date!\",\n                  s.weight_kg, s.reps, s.duration_s, s.distance_m\n             from workout_exercises we\n             join workouts w on w.id = we.workout_id\n             join sets s on s.workout_exercise_id = we.id\n            where w.user_id = $1 and w.deleted_at is null\n              and we.deleted_at is null and s.deleted_at is null and s.set_type <> 'warmup'\n              and we.exercise_id in (select id from exercises where id = $2 or merged_into_id = $2)\n              and ($4::text is null or we.variant_key = $4)\n            order by w.started_at, w.id, we.position, s.position",
   "describe": {
     "columns": [
       {
@@ -82,5 +82,5 @@
       true
     ]
   },
-  "hash": "66925c2e39acabe17478e800800ae2b9a932f5434094f63957c78001e6ebd39d"
+  "hash": "8ecb459ae7fa88f6375647395dd0b1ee42da41018db4127c0e8e5571b6908676"
 }

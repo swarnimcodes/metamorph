@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select c.id as \"exercise_id!\", c.name as \"name!\", c.kind as \"kind!: ExerciseKind\",\n                  we.variant_key as \"variant_key!\",\n                  count(distinct w.id) as \"sessions!\",\n                  (max(w.started_at) at time zone $2::text)::date as \"last_performed!\"\n             from workout_exercises we\n             join workouts w on w.id = we.workout_id\n             join exercises e on e.id = we.exercise_id\n             join exercises c on c.id = coalesce(e.merged_into_id, e.id)\n            where w.user_id = $1 and w.deleted_at is null and we.deleted_at is null\n              and exists (select 1 from sets s\n                           where s.workout_exercise_id = we.id and s.deleted_at is null\n                             and s.set_type <> 'warmup')\n            group by c.id, c.name, c.kind, we.variant_key\n            order by max(w.started_at) desc, c.name, we.variant_key",
+  "query": "select c.id as \"exercise_id!\", c.name as \"name!\", c.kind as \"kind!: ExerciseKind\",\n                  we.variant_key as \"variant_key!\",\n                  count(distinct w.id) as \"sessions!\",\n                  ((array_agg(w.started_at at time zone coalesce(w.timezone, $2::text) order by w.started_at desc))[1])::date as \"last_performed!\"\n             from workout_exercises we\n             join workouts w on w.id = we.workout_id\n             join exercises e on e.id = we.exercise_id\n             join exercises c on c.id = coalesce(e.merged_into_id, e.id)\n            where w.user_id = $1 and w.deleted_at is null and we.deleted_at is null\n              and exists (select 1 from sets s\n                           where s.workout_exercise_id = we.id and s.deleted_at is null\n                             and s.set_type <> 'warmup')\n            group by c.id, c.name, c.kind, we.variant_key\n            order by max(w.started_at) desc, c.name, we.variant_key",
   "describe": {
     "columns": [
       {
@@ -87,5 +87,5 @@
       null
     ]
   },
-  "hash": "c64b975e6ecc3f1d911adb73789c8159cfb1e0da350831762c9c8431f1535af2"
+  "hash": "443a69f5ef47609d31a9e1a24b092fdccf6b709fbe85da654ecb2a4a88981917"
 }

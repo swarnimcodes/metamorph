@@ -532,3 +532,106 @@ async fn body_weight_list_keeps_the_newest_entries_when_capped(pool: PgPool) {
     assert_eq!(list[0]["date"], "2010-01-03", "the two oldest days are the ones dropped");
     assert_eq!(list[4999]["date"], "2023-09-11");
 }
+
+// ---- time zones: a workout keeps the day it was done on ----
+
+/// A workout with one set, optionally recording the zone the device was in.
+async fn log_in_zone(app: &Router, token: &str, started_at: &str, zone: Option<&str>, exercise: Uuid) -> Uuid {
+    let mut body = json!({ "started_at": started_at });
+    if let Some(z) = zone {
+        body["timezone"] = json!(z);
+    }
+    let w = post(app, "/workouts", token, body).await;
+    let wid = w["id"].as_str().unwrap().to_string();
+    let we = post(app, &format!("/workouts/{wid}/exercises"), token, json!({ "exercise_id": exercise })).await;
+    post(app, &format!("/workout-exercises/{}/sets", we["id"].as_str().unwrap()), token, kg(60.0, 5)).await;
+    wid.parse().unwrap()
+}
+
+async fn zone_of(app: &Router, token: &str, id: Uuid) -> String {
+    get(app, &format!("/workouts/{id}"), token).await["timezone"].as_str().unwrap().to_string()
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn each_workout_is_dated_in_the_zone_it_was_done_in_whatever_the_profile_says_now(pool: PgPool) {
+    let app = app(pool.clone());
+    let (token, _) = login(&app, "traveller").await;
+    let bench = exercise_id(&app, &token, "bench-press").await;
+    set_timezone(&app, &token, "Asia/Kolkata").await;
+
+    // 2026-01-05 20:00 UTC is midday in Los Angeles but already 01:30 the next morning in India.
+    let at_utc = "2026-01-05T20:00:00Z";
+    let la = log_in_zone(&app, &token, at_utc, Some("America/Los_Angeles"), bench).await;
+    let home = log_in_zone(&app, &token, at_utc, None, bench).await; // no zone sent: the account's (India)
+    // A workout from before zones were recorded (null) follows the account's zone.
+    let legacy = log_in_zone(&app, &token, "2026-01-03T03:00:00Z", Some("UTC"), bench).await;
+    sqlx::query("update workouts set timezone = null where id = $1").bind(legacy).execute(&pool).await.unwrap();
+
+    let dates = |c: &Value| -> Vec<String> {
+        c["days"].as_array().unwrap().iter().map(|d| d["date"].as_str().unwrap().to_string()).collect()
+    };
+    // LA workout: Jan 5. Home workout: Jan 6 (India). Legacy 03:00 UTC: Jan 3 in India (08:30).
+    let before = get(&app, "/stats/consistency", &token).await;
+    assert_eq!(dates(&before), ["2026-01-03", "2026-01-05", "2026-01-06"], "{before}");
+
+    // The traveller lands in New York and the profile zone follows them. History must not move,
+    // except the legacy workout, which has no zone of its own and follows the account.
+    set_timezone(&app, &token, "America/New_York").await;
+    let after = get(&app, "/stats/consistency", &token).await;
+    assert_eq!(
+        dates(&after),
+        ["2026-01-02", "2026-01-05", "2026-01-06"],
+        "recorded workouts keep their day; the legacy one (03:00 UTC = 22:00 the night before in New York) follows the profile: {after}"
+    );
+    assert_eq!(after["timezone"], "America/New_York", "'today' follows the profile zone");
+
+    // The per-exercise chart dates sessions the same way.
+    let progress = get(&app, &format!("/stats/exercises/{bench}/progress"), &token).await;
+    let pdates: Vec<&str> = progress["points"].as_array().unwrap().iter().map(|p| p["date"].as_str().unwrap()).collect();
+    assert_eq!(pdates, ["2026-01-02", "2026-01-05", "2026-01-06"], "{progress}");
+
+    // Workouts report the zone their times belong in.
+    assert_eq!(zone_of(&app, &token, la).await, "America/Los_Angeles");
+    assert_eq!(zone_of(&app, &token, home).await, "Asia/Kolkata", "recorded from the account when the device sent none");
+    assert_eq!(zone_of(&app, &token, legacy).await, "America/New_York", "a legacy workout reports the account's current zone");
+    let list = get(&app, "/workouts", &token).await;
+    let zones: std::collections::BTreeSet<&str> =
+        list.as_array().unwrap().iter().map(|w| w["timezone"].as_str().unwrap()).collect();
+    assert_eq!(zones, ["America/Los_Angeles", "America/New_York", "Asia/Kolkata"].into_iter().collect());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_unknown_time_zone_is_refused_before_it_can_break_anyone_s_stats(pool: PgPool) {
+    let app = app(pool.clone());
+    let (token, uid) = login(&app, "typo").await;
+    for bad in ["Mars/Olympus", "", "UTC+5", "../etc/passwd"] {
+        let (status, body) =
+            call(&app, Method::POST, "/workouts", Some(&token), Some(json!({ "timezone": bad }))).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{bad:?}: {body}");
+    }
+    let n: i64 = sqlx::query_scalar("select count(*) from workouts where user_id = $1").bind(uid).fetch_one(&pool).await.unwrap();
+    assert_eq!(n, 0, "a refused request created nothing");
+
+    // The database refuses it too, so a script or a future code path cannot get one in either.
+    let w = post(&app, "/workouts", &token, json!({ "timezone": "Europe/London" })).await;
+    let res = sqlx::query("update workouts set timezone = 'Nowhere/Land' where id = $1::uuid")
+        .bind(w["id"].as_str().unwrap())
+        .execute(&pool)
+        .await;
+    assert!(res.is_err(), "the trigger should reject an unknown zone");
+    assert_eq!(w["timezone"], "Europe/London");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_weigh_in_dated_ahead_of_the_servers_clock_is_fine_for_a_traveller(pool: PgPool) {
+    let app = app(pool);
+    let (token, _) = login(&app, "eastbound").await;
+    // The furthest-ahead local date anywhere is UTC+14. A phone there is on that date; one day later cannot exist yet.
+    let ahead = (OffsetDateTime::now_utc() + Duration::hours(14)).date();
+    let put = |d: Date| {
+        let (app, token) = (app.clone(), token.clone());
+        async move { call(&app, Method::PUT, &format!("/body-weights/{d}"), Some(&token), Some(json!({ "weight_kg": 80 }))).await }
+    };
+    assert_eq!(put(ahead).await.0, StatusCode::OK);
+    assert_eq!(put(ahead + Duration::days(1)).await.0, StatusCode::BAD_REQUEST);
+}

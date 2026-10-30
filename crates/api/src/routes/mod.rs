@@ -40,6 +40,14 @@ async fn health(State(state): State<AppState>) -> AppResult<Json<Value>> {
     Ok(Json(json!({ "status": "ok" })))
 }
 
+/// Whether `name` is an IANA time zone the database knows. Anything stored and later used in
+/// `at time zone` must pass this first, or every stats query for that user would fail.
+pub(crate) async fn known_timezone(pool: &sqlx::PgPool, name: &str) -> AppResult<bool> {
+    Ok(sqlx::query_scalar!(r#"select exists (select 1 from pg_timezone_names where name = $1) as "known!""#, name)
+        .fetch_one(pool)
+        .await?)
+}
+
 /// Browsers only call the API cross-origin from the configured origins. With none
 /// configured, dev login mode stays permissive and production stays closed.
 fn cors_layer(config: &crate::config::Config) -> Option<CorsLayer> {
