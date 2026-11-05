@@ -188,3 +188,8 @@ Its behaviour is tested by `deploy/server/test-metamorph-deploy.sh`, which `ci.y
   are written to be additive, so the previous binary keeps working. There are no database backups.
 - If the signing key ever leaks, with Play App Signing you can reset the upload key in the Play Console; sideloaded copies
   signed with it cannot be updated by a new key.
+
+## Go API
+
+The API also exists as a Go port in `backend/`. `API_IMPL=go deploy/build.sh` builds it as a static binary in
+`deploy/out/` instead of the Rust one; in CI the repository variable `API_IMPL` decides. See `docs/go-cutover.md`.

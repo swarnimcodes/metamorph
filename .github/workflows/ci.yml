@@ -1,7 +1,7 @@
 name: CI
 
 # Every push to main and every pull request is tested. A push to main can also deploy, once the repository
-# variable AUTO_DEPLOY is "true"; that step waits for approval on the "production" environment.
+# variable AUTO_DEPLOY is "true". Which API ships is chosen by the repository variable API_IMPL ("rust" by default).
 
 on:
   push:
@@ -43,8 +43,44 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      # The acceptance suite below is Go, even when it tests the Rust server.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
       - run: cargo clippy -p metamorph-api --all-targets -- -D warnings
       - run: cargo test -p metamorph-api
+      # The black-box suite that the Go port must also pass: while Rust is the reference it must keep passing here.
+      - run: backend/acceptance/run.sh rust
+        env:
+          PGPASSWORD: postgres
+
+  backend-go:
+    name: Go API (vet, tests and acceptance suite)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGPASSWORD: postgres
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Formatting
+        run: test -z "$(gofmt -l backend migrations)"
+      - run: go vet ./backend/... ./migrations/...
+      - run: go test ./backend/internal/... -count=1
+      - run: backend/acceptance/run.sh go
 
   frontend:
     name: Web app (types, build and tests)
@@ -83,7 +119,7 @@ jobs:
 
   deploy:
     name: Deploy to the server
-    needs: [backend, frontend, scripts]
+    needs: [backend, backend-go, frontend, scripts]
     # Off until the repository variable AUTO_DEPLOY is "true". Never on a pull request.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTO_DEPLOY == 'true'
     runs-on: ubuntu-24.04
@@ -100,13 +136,20 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      - uses: actions/setup-go@v6
+        if: vars.API_IMPL == 'go'
+        with:
+          go-version-file: go.mod
       - name: Google client id for the web build
         env:
           CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
         run: |
           test -n "$CLIENT_ID" || { echo "the repository variable VITE_GOOGLE_CLIENT_ID is not set: sign-in would be missing from the site"; exit 1; }
           echo "VITE_GOOGLE_CLIENT_ID=$CLIENT_ID" > app/.env.local
-      - name: Build the API (Fedora container, same glibc as the server) and the web app
+      - name: "Build the API (Rust in a Fedora container with the server's glibc, or Go as a static binary) and the web app"
+        env:
+          # Set the repository variable API_IMPL to "go" to ship the Go API; unset means Rust.
+          API_IMPL: ${{ vars.API_IMPL || 'rust' }}
         run: ./deploy/build.sh
       - name: Prepare the connection
         env:
