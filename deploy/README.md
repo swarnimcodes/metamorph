@@ -3,8 +3,14 @@
 One origin serves everything: Caddy hands out the web app and proxies `/api/*` to the API on
 `127.0.0.1:3000`. Postgres is local and reached over its unix socket. Nothing runs as root.
 
-The API is a static Go binary, built on the build machine (a CI runner or your laptop), so the droplet never
-compiles anything and the binary needs no libraries from the machine that built it.
+The API lives in its own repository, [metamorphosis](https://github.com/swarnimcodes/metamorphosis). It is a static
+Go binary, built on the build machine (a CI runner or your laptop), so the droplet never compiles anything and the
+binary needs no libraries from the machine that built it. `deploy/api-ref` pins the commit of that repository that
+ships.
+
+**Shipping an API change:** merge it in metamorphosis (its CI must be green), then put the new commit id in
+`deploy/api-ref` here and push. Nothing ships by merging in metamorphosis alone. To try a local checkout:
+`API_SRC=../metamorphosis deploy/build.sh`.
 
 ## Before you start
 
@@ -146,7 +152,7 @@ If Caddy answers `502` and its log says *permission denied*, SELinux is blocking
 
 | Workflow | Runs | Does |
 |---|---|---|
-| `ci.yml` | every push and pull request | API format, vet and tests (Postgres 18) including the acceptance suite, web type-check, build and tests, script tests |
+| `ci.yml` | every push and pull request | web type-check, build and tests, script tests |
 | `ci.yml` → `deploy` | push to `main`, after the tests pass, **only when `AUTO_DEPLOY` is `true`** | builds the API in the Fedora container, uploads it, restarts, checks health, **rolls back** if unhealthy |
 | `release.yml` | push to `main` that changes the version in `app/src-tauri/tauri.conf.json`, **only when `AUTO_RELEASE` is `true`** | builds the signed APK and Play bundle, writes a changelog from the commit subjects, publishes a GitHub release |
 

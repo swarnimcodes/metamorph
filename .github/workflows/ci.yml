@@ -17,34 +17,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  backend:
-    name: API (vet, tests and acceptance suite)
-    runs-on: ubuntu-24.04
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    env:
-      PGPASSWORD: postgres
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-      - name: Formatting
-        run: test -z "$(gofmt -l backend migrations)"
-      - run: go vet ./backend/... ./migrations/...
-      - run: go test ./backend/internal/... -count=1
-      - run: backend/acceptance/run.sh
-
   frontend:
     name: Web app (types, build and tests)
     runs-on: ubuntu-24.04
@@ -82,7 +54,7 @@ jobs:
 
   deploy:
     name: Deploy to the server
-    needs: [backend, frontend, scripts]
+    needs: [frontend, scripts]
     # Off until the repository variable AUTO_DEPLOY is "true". Never on a pull request.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTO_DEPLOY == 'true'
     runs-on: ubuntu-24.04
@@ -101,14 +73,14 @@ jobs:
           node-version: 24
       - uses: actions/setup-go@v6
         with:
-          go-version-file: go.mod
+          go-version: "1.27"
       - name: Google client id for the web build
         env:
           CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
         run: |
           test -n "$CLIENT_ID" || { echo "the repository variable VITE_GOOGLE_CLIENT_ID is not set: sign-in would be missing from the site"; exit 1; }
           echo "VITE_GOOGLE_CLIENT_ID=$CLIENT_ID" > app/.env.local
-      - name: Build the API and the web app
+      - name: Build the API (the commit pinned in deploy/api-ref) and the web app
         run: ./deploy/build.sh
       - name: Prepare the connection
         env:
