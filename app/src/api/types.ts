@@ -1,4 +1,4 @@
-// Hand-written mirrors of the JSON served by crates/api. snake_case, RFC 3339
+// Hand-written mirrors of the JSON served by backend/. snake_case, RFC 3339
 // timestamps, decimals as JSON numbers, ids as UUID strings.
 
 export type UnitSystem = "metric" | "imperial";

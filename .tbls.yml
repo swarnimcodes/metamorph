@@ -1,5 +1,5 @@
 # tbls config. Regenerate docs after any migration:
-#   sqlx migrate run && tbls doc --rm-dist
+#   run the API once with RUN_MIGRATIONS=true, then: tbls doc --rm-dist
 # Override the DSN (e.g. in CI) with the TBLS_DSN environment variable.
 dsn: postgres://postgres@localhost/metamorph?sslmode=disable
 docPath: docs/schema

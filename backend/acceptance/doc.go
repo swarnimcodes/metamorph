@@ -2,21 +2,18 @@
 //
 // It holds no server code. Every test talks to an already running server over HTTP and so
 // pins the observable contract (status codes, JSON field names, null versus empty arrays,
-// number types, error codes) that any implementation must reproduce. The reference
-// behaviour is the Rust server in crates/api; the Go port in backend/ must pass the same tests.
-//
-// The scenarios are ports of crates/api/tests/api.rs and crates/api/tests/stats.rs
-// (crates/api/tests/google.rs is deliberately not covered: it needs in-process fake keys).
+// number types, error codes) that the apps depend on. The suite was written against the
+// Rust API this server replaced and passed on both before the switch; Google sign-in is
+// covered by in-process tests in backend/internal/api instead, because it needs fake signing keys.
 //
 // # Running it
 //
-// The easy way starts a server, runs the suite and cleans up, for either implementation:
+// The easy way starts a server, runs the suite and cleans up:
 //
-//	backend/acceptance/run.sh rust   # server on 127.0.0.1:3100, database metamorph_accept_rust
-//	backend/acceptance/run.sh go     # server on 127.0.0.1:3101, database metamorph_accept_go
+//	backend/acceptance/run.sh        # server on 127.0.0.1:3101, database metamorph_accept_go
 //
 // run.sh drops and recreates the throwaway database (psql -U postgres -h localhost), builds and
-// starts the chosen server with DEV_LOGIN=true RUN_MIGRATIONS=true JWT_SECRET=acceptance, waits
+// starts the server with DEV_LOGIN=true RUN_MIGRATIONS=true JWT_SECRET=acceptance, waits
 // for GET /health, runs go test, and always stops the server and drops the database afterwards.
 //
 // To run against a server you started yourself (it must have DEV_LOGIN=true and a migrated
@@ -41,7 +38,7 @@
 //   - Anything a test creates (gyms, cities, exercises) carries a random token so tests do not
 //     see each other's data and can run in parallel against one shared database.
 //   - Only the standard library is used.
-//   - A test that fails on the Rust server is a wrong test: Rust is the reference.
+//   - A failing test is a bug in the server or a change of contract: decide which before editing the test.
 //
 // Not covered black-box: the "dev login is absent unless enabled" and "refresh is mounted even
 // with dev login off" checks, because the suite needs DEV_LOGIN=true to sign anyone in.

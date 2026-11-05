@@ -3,8 +3,8 @@
 One origin serves everything: Caddy hands out the web app and proxies `/api/*` to the API on
 `127.0.0.1:3000`. Postgres is local and reached over its unix socket. Nothing runs as root.
 
-The API is built in a Fedora 44 container (matching the server's glibc) using the committed
-`.sqlx` cache, so the droplet never compiles anything and no database is needed to build.
+The API is a static Go binary, built on the build machine (a CI runner or your laptop), so the droplet never
+compiles anything and the binary needs no libraries from the machine that built it.
 
 ## Before you start
 
@@ -146,7 +146,7 @@ If Caddy answers `502` and its log says *permission denied*, SELinux is blocking
 
 | Workflow | Runs | Does |
 |---|---|---|
-| `ci.yml` | every push and pull request | clippy, API tests (Postgres 18), web type-check, build and tests, script tests |
+| `ci.yml` | every push and pull request | API format, vet and tests (Postgres 18) including the acceptance suite, web type-check, build and tests, script tests |
 | `ci.yml` → `deploy` | push to `main`, after the tests pass, **only when `AUTO_DEPLOY` is `true`** | builds the API in the Fedora container, uploads it, restarts, checks health, **rolls back** if unhealthy |
 | `release.yml` | push to `main` that changes the version in `app/src-tauri/tauri.conf.json`, **only when `AUTO_RELEASE` is `true`** | builds the signed APK and Play bundle, writes a changelog from the commit subjects, publishes a GitHub release |
 
@@ -188,8 +188,3 @@ Its behaviour is tested by `deploy/server/test-metamorph-deploy.sh`, which `ci.y
   are written to be additive, so the previous binary keeps working. There are no database backups.
 - If the signing key ever leaks, with Play App Signing you can reset the upload key in the Play Console; sideloaded copies
   signed with it cannot be updated by a new key.
-
-## Go API
-
-The API also exists as a Go port in `backend/`. `API_IMPL=go deploy/build.sh` builds it as a static binary in
-`deploy/out/` instead of the Rust one; in CI the repository variable `API_IMPL` decides. See `docs/go-cutover.md`.

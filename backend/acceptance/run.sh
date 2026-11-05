@@ -1,21 +1,15 @@
 #!/usr/bin/env bash
-# Runs the black-box acceptance suite against one implementation of the API.
+# Runs the black-box acceptance suite against the API.
 #
-#   backend/acceptance/run.sh rust   # server on 127.0.0.1:3100, database metamorph_accept_rust
-#   backend/acceptance/run.sh go     # server on 127.0.0.1:3101, database metamorph_accept_go
+#   backend/acceptance/run.sh        # server on 127.0.0.1:3101, database metamorph_accept_go
 #
 # Creates a throwaway database, starts the server, waits for /health, runs `go test`, and always
 # stops the server and drops the database again. Extra arguments are passed to `go test`
 # (for example: -run TestStats -v).
 set -euo pipefail
 
-impl="${1:-}"
-case "$impl" in
-  rust) port=3100 ;;
-  go) port=3101 ;;
-  *) echo "usage: $0 <rust|go> [go test args...]" >&2; exit 2 ;;
-esac
-shift
+impl=go
+port=3101
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 db="metamorph_accept_${impl}"
@@ -58,18 +52,9 @@ echo "==> recreating database ${db}"
 "${pg[@]}" -c "drop database if exists ${db} with (force)"
 "${pg[@]}" -c "create database ${db}"
 
-case "$impl" in
-  rust)
-    echo "==> building the Rust server"
-    (cd "$root" && SQLX_OFFLINE=true cargo build -p metamorph-api)
-    bin="$root/target/debug/metamorph-api"
-    ;;
-  go)
-    echo "==> building the Go server"
-    (cd "$root" && go build -o "$tmp/api" ./backend/cmd/api)
-    bin="$tmp/api"
-    ;;
-esac
+echo "==> building the server"
+(cd "$root" && go build -o "$tmp/api" ./backend/cmd/api)
+bin="$tmp/api"
 
 echo "==> starting the ${impl} server on ${base_url}"
 (
