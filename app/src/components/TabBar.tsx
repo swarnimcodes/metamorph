@@ -9,7 +9,7 @@ const icon = (children: ReactNode) => (
   </svg>
 );
 
-const TABS: { id: Tab; label: string; href: string; glyph: ReactNode }[] = [
+export const TABS: { id: Tab; label: string; href: string; glyph: ReactNode }[] = [
   // The barbell from the logo.
   { id: "train", label: "Train", href: `#${paths.home}`, glyph: icon(<><path d="M3 12h18" /><path d="M7.5 6.5v11M16.5 6.5v11" /><path d="M4.5 9v6M19.5 9v6" /></>) },
   { id: "progress", label: "Progress", href: `#${paths.stats}`, glyph: icon(<><path d="M5 20v-8" /><path d="M12 20V5" /><path d="M19 20v-5" /></>) },

@@ -31,7 +31,7 @@ export function WorkoutDetail({ id }: { id: string }) {
 
 
   return (
-    <main className="screen">
+    <main className="screen medium">
       <button className="btn quiet back" onClick={() => navigate(paths.home)}>‹ History</button>
       {error && <p className="error" role="alert">{error}</p>}
       {!w && !error && <p className="dim empty">Loading…</p>}
@@ -54,7 +54,7 @@ export function WorkoutDetail({ id }: { id: string }) {
           </header>
 
           {w.exercises.length === 0 && <p className="dim empty">Nothing was logged.</p>}
-          <div className="stack-lg">
+          <div className="stack-lg exercises-grid">
             {w.exercises.map((we) => (
               <section key={we.id} className="card exercise" aria-label={we.exercise_name}>
                 <h2>

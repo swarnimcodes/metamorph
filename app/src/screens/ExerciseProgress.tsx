@@ -94,7 +94,7 @@ export function ExerciseProgress({ id, variant, from }: { id: string; variant: s
   const records = data ? recordRows(data.records, unit) : [];
 
   return (
-    <main className="screen">
+    <main className="screen medium">
       <button className="btn quiet back" onClick={() => navigate(from ?? paths.stats)}>
         {from?.startsWith("/history/") ? "‹ Workout" : "‹ Progress"}
       </button>

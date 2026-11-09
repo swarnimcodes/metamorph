@@ -21,7 +21,7 @@ export function Stats() {
     : [];
 
   return (
-    <main className="screen">
+    <main className="screen wide">
       <header className="stack-sm">
         <h1>Progress</h1>
         {consistency && <p className="dim">{formatDay(consistency.from)} to {formatDay(consistency.to)}</p>}
@@ -52,36 +52,38 @@ export function Stats() {
         </>
       )}
 
-      <BodyWeightCard />
+      <div className="split">
+        <BodyWeightCard />
 
-      <section className="stack" aria-labelledby="progress-h">
-        <h2 id="progress-h">Exercise progress</h2>
-        {exercisesError && (
-          <p className="error" role="alert">
-            {exercisesError} <button className="link" onClick={retryExercises}>Retry</button>
-          </p>
-        )}
-        {exercises && exercises.length === 0 && (
-          <p className="dim">Log your first workout and your exercises will show up here.</p>
-        )}
-        {exercises && exercises.length > 0 && (
-          <ul className="rows card">
-            {exercises.map((x) => (
-              <li key={`${x.exercise_id}|${x.variant_key}`}>
-                <button className="row-link" onClick={() => navigate(paths.exercise(x.exercise_id, x.variant_key))}>
-                  <span className="card-title">
-                    {x.name}
-                    {x.variant_label && <span className="dim"> · {x.variant_label}</span>}
-                  </span>
-                  <span className="dim small">
-                    {x.sessions} {x.sessions === 1 ? "session" : "sessions"} · last {formatDay(x.last_performed, false)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <section className="stack" aria-labelledby="progress-h">
+          <h2 id="progress-h">Exercise progress</h2>
+          {exercisesError && (
+            <p className="error" role="alert">
+              {exercisesError} <button className="link" onClick={retryExercises}>Retry</button>
+            </p>
+          )}
+          {exercises && exercises.length === 0 && (
+            <p className="dim">Log your first workout and your exercises will show up here.</p>
+          )}
+          {exercises && exercises.length > 0 && (
+            <ul className="rows card">
+              {exercises.map((x) => (
+                <li key={`${x.exercise_id}|${x.variant_key}`}>
+                  <button className="row-link" onClick={() => navigate(paths.exercise(x.exercise_id, x.variant_key))}>
+                    <span className="card-title">
+                      {x.name}
+                      {x.variant_label && <span className="dim"> · {x.variant_label}</span>}
+                    </span>
+                    <span className="dim small">
+                      {x.sessions} {x.sessions === 1 ? "session" : "sessions"} · last {formatDay(x.last_performed, false)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

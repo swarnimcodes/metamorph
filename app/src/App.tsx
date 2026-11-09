@@ -1,7 +1,9 @@
 import { useEffect } from "react";
+import { Sidebar } from "./components/Sidebar";
 import { TabBar, type Tab } from "./components/TabBar";
 import { Toasts } from "./components/Toasts";
-import { useRoute } from "./router";
+import { shortcutFor } from "./lib/shortcuts";
+import { navigate, paths, useRoute } from "./router";
 import { ActiveWorkout } from "./screens/ActiveWorkout";
 import { Home } from "./screens/Home";
 import { Login } from "./screens/Login";
@@ -28,6 +30,35 @@ export default function App() {
     document.addEventListener("visibilitychange", check);
     return () => document.removeEventListener("visibilitychange", check);
   }, []);
+
+  // Keyboard shortcuts (1-4 for the tabs, n and / for the page's own action), only when signed in.
+  useEffect(() => {
+    if (status !== "signed-in") return;
+    const onKey = (e: KeyboardEvent) => {
+      const action = shortcutFor({
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        altKey: e.altKey,
+        target: document.activeElement,
+        dialogOpen: document.querySelector('[role="dialog"]') !== null,
+      });
+      if (!action) return;
+      if (action.type === "go") {
+        const to = { train: paths.home, progress: paths.stats, social: paths.social, you: paths.you }[action.tab];
+        e.preventDefault();
+        navigate(to);
+        return;
+      }
+      const target = document.querySelector<HTMLElement>(`[data-shortcut="${action.key}"]`);
+      if (!target) return;
+      e.preventDefault();
+      if (target instanceof HTMLInputElement) target.focus();
+      else target.click();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [status]);
 
   let content;
   if (status === "loading") content = <main className="screen center"><p className="dim">Loading…</p></main>;
@@ -65,7 +96,11 @@ export default function App() {
 
   return (
     <>
-      {content}
+      {/* On wide screens the sidebar sits beside the content; below 900px CSS hides it and the tab bar shows. */}
+      <div className="shell">
+        {showTabs && <Sidebar current={tab} />}
+        <div className="shell-main">{content}</div>
+      </div>
       {showTabs && <TabBar current={tab} />}
       <Toasts />
     </>

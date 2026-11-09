@@ -27,7 +27,9 @@ export function BodyWeightCard() {
   const timeZone = deviceTimeZone();
   const { data: bodyWeights, error: loadError, retry } = useBodyWeights();
   const [open, setOpen] = useState(false);
-  const [rangeId, setRangeId] = useState<(typeof RANGES)[number]["id"]>("3m");
+  const [rangeId, setRangeId] = useState<(typeof RANGES)[number]["id"]>(() =>
+    typeof window !== "undefined" && window.matchMedia?.("(min-width: 900px)").matches ? "1y" : "3m",
+  );
   const range = RANGES.find((r) => r.id === rangeId) ?? RANGES[0];
 
   const today = todayIn(timeZone);

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+
+/** How long the desktop app waits before offering to start the browser step again. */
+const BROWSER_SLOW_MS = 12_000;
 import { errMsg } from "../stores/auth";
-import { GOOGLE_CLIENT_ID, nativeGoogleSignIn, renderGoogleButton } from "../lib/google";
-import { isAndroidApp } from "../lib/platform";
+import { desktopGoogleConfigured, desktopGoogleSignIn, GOOGLE_CLIENT_ID, nativeGoogleSignIn, renderGoogleButton } from "../lib/google";
+import { isAndroidApp, isDesktopApp } from "../lib/platform";
 
 /** Google's "G" mark, unmodified colours. */
 function GoogleG() {
@@ -21,26 +24,54 @@ function GoogleG() {
  * loads no script) without a client id.
  */
 export function GoogleButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
-  if (GOOGLE_CLIENT_ID && isAndroidApp()) return <NativeGoogleButton onCredential={onCredential} disabled={disabled} />;
+  if (GOOGLE_CLIENT_ID && isAndroidApp()) return <NativeGoogleButton signIn={nativeGoogleSignIn} onCredential={onCredential} disabled={disabled} />;
+  // The desktop webview cannot open Google's pop-up, so the web button would fail: use the system browser, or show
+  // nothing when the desktop client is not configured.
+  if (isDesktopApp()) {
+    return desktopGoogleConfigured() ? <NativeGoogleButton signIn={desktopGoogleSignIn} inBrowser onCredential={onCredential} disabled={disabled} /> : null;
+  }
   return <WebGoogleButton onCredential={onCredential} disabled={disabled} />;
 }
 
-/** The Android app has no GIS: our own face, and a tap opens the system account picker. */
-function NativeGoogleButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
+/** Android and desktop have no usable GIS: our own face, and a tap opens the system account picker (Android) or the browser (desktop). */
+function NativeGoogleButton({
+  signIn,
+  onCredential,
+  disabled,
+  inBrowser,
+}: {
+  signIn: () => Promise<string>;
+  onCredential: (idToken: string) => void;
+  disabled?: boolean;
+  /** The sign-in continues in the user's browser (desktop): say so, and offer a way out if it never finishes. */
+  inBrowser?: boolean;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [slow, setSlow] = useState(false);
+  // Only the latest attempt may change the screen: an abandoned one (a closed browser tab) must not.
+  const attempt = useRef(0);
+
+  useEffect(() => {
+    if (!picking || !inBrowser) return;
+    const t = setTimeout(() => setSlow(true), BROWSER_SLOW_MS);
+    return () => clearTimeout(t);
+  }, [picking, inBrowser]);
 
   async function pick() {
+    const mine = ++attempt.current;
     setPicking(true);
+    setSlow(false);
     setError(null);
     try {
-      onCredential(await nativeGoogleSignIn());
+      const token = await signIn();
+      if (mine === attempt.current) onCredential(token);
     } catch (e) {
       // Closing the account picker is not worth an error.
       const msg = errMsg(e);
-      if (!/cancel/i.test(msg)) setError(msg);
+      if (mine === attempt.current && !/cancel/i.test(msg)) setError(msg);
     } finally {
-      setPicking(false);
+      if (mine === attempt.current) setPicking(false);
     }
   }
 
@@ -49,9 +80,25 @@ function NativeGoogleButton({ onCredential, disabled }: { onCredential: (idToken
       <div className={disabled || picking ? "google-slot is-busy" : "google-slot"}>
         <button type="button" className="google-face google-native" onClick={() => void pick()} disabled={disabled || picking}>
           <GoogleG />
-          <span>Continue with Google</span>
+          <span>{picking && inBrowser ? "Waiting for your browser…" : "Continue with Google"}</span>
         </button>
       </div>
+      {picking && inBrowser && (
+        <div className="google-hint" role="status">
+          <p>
+            <strong>Continue in your browser.</strong> We've opened Google's sign-in page there. Choose your
+            account, then come back to this window.
+          </p>
+          {slow && (
+            <p>
+              Nothing opened, or you closed it?{" "}
+              <button type="button" className="link" onClick={() => void pick()}>
+                Open it again
+              </button>
+            </p>
+          )}
+        </div>
+      )}
       {error && <p className="error" role="alert">{error}</p>}
     </div>
   );

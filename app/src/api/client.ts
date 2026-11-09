@@ -1,3 +1,4 @@
+import { isTauri } from "../lib/platform";
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
   BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UsernameAvailability, Workout,
@@ -52,6 +53,22 @@ function url(path: string, query?: Opts["query"], keepEmpty = false): string {
   return u.toString();
 }
 
+/**
+ * In the installed apps (Tauri) there is no address bar or console to look at, so say which server the request was
+ * for and what the engine reported ("Load failed" is WebKit's word for a blocked or unreachable request). The website
+ * keeps its plain message.
+ */
+export function networkDetail(e: unknown): string {
+  if (!isTauri()) return "";
+  let host = API_URL;
+  try {
+    host = new URL(API_URL, globalThis.location?.href).host;
+  } catch {
+    /* keep the raw value */
+  }
+  return ` (${host}: ${e instanceof Error ? e.message : String(e)})`;
+}
+
 async function send(method: string, path: string, opts: Opts): Promise<Response> {
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
@@ -65,8 +82,8 @@ async function send(method: string, path: string, opts: Opts): Promise<Response>
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     });
-  } catch {
-    throw new ApiError(0, "Can't reach the server");
+  } catch (e) {
+    throw new ApiError(0, `Can't reach the server${networkDetail(e)}`);
   }
 }
 

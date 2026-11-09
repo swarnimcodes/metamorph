@@ -32,7 +32,7 @@ export function Home() {
   }
 
   return (
-    <main className="screen">
+    <main className="screen wide">
       <header className="top">
         <div>
           <h1>Train</h1>
@@ -41,14 +41,14 @@ export function Home() {
       </header>
 
       {unfinished ? (
-        <button className="btn primary big resume" onClick={() => navigate(paths.workout(unfinished.id))}>
+        <button className="btn primary big resume" data-shortcut="n" title="Resume (n)" onClick={() => navigate(paths.workout(unfinished.id))}>
           <span>Resume workout</span>
           <span className="resume-sub">
             {unfinished.title || "Workout"} · {formatElapsed(unfinished.started_at, now)}
           </span>
         </button>
       ) : (
-        <button className="btn primary big" onClick={start} disabled={starting || pending}>
+        <button className="btn primary big" data-shortcut="n" title="Start workout (n)" onClick={start} disabled={starting || pending}>
           {starting ? "Starting…" : "Start workout"}
         </button>
       )}

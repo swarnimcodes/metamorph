@@ -11,7 +11,7 @@ export function Social() {
   const { found, loading, reload } = useGymSearch(q);
 
   return (
-    <main className="screen">
+    <main className="screen wide">
       <header className="stack-sm">
         <h1>Social</h1>
       </header>
@@ -23,11 +23,11 @@ export function Social() {
         </div>
         <label className="field">
           <span className="sr-only">Search gyms</span>
-          <input type="search" placeholder="Search by name, area or city" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
+          <input type="search" data-shortcut="/" title="Search (/)" placeholder="Search by name, area or city" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
         </label>
 
         {found.length > 0 && (
-          <ul className="rows card" aria-busy={loading} aria-label="Gyms">
+          <ul className="rows card gym-grid" aria-busy={loading} aria-label="Gyms">
             {found.map((g) => (
               <li key={g.id} className="gym-row">
                 <span className="gym-main">
