@@ -185,6 +185,8 @@ Repository **variables** (Settings → Secrets and variables → Actions → Var
 | `production` | `DEPLOY_SSH_KEY` | the private half of a key made only for CI |
 | `production` | `DEPLOY_KNOWN_HOSTS` | the server's host key line (`ssh-keygen -F <host>`), so CI checks it is talking to the right machine |
 
+Repository **secret** (not in an environment, so the desktop build can also be tried from a branch): `GOOGLE_DESKTOP_CLIENT_SECRET`, the secret of the Desktop client. Google documents it as not confidential for this client type, and it is compiled into the installers; it is kept out of git all the same.
+
 Optionally add yourself as a **required reviewer** on the `production` or `release` environment: every deploy or release then waits for one approval click.
 
 **Server** (once): `sudo deploy/server/setup-ci-deploy.sh ci-key.pub` creates a `deploy` user that can only be reached with
