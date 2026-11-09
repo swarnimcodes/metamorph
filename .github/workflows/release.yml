@@ -1,9 +1,11 @@
 name: Release
 
-# Publishes a GitHub release with a signed Android APK and a changelog whenever the app version in
-# app/src-tauri/tauri.conf.json changes on main, which is what a "Bump the version to ..." commit does.
+# Publishes a GitHub release whenever the app version in app/src-tauri/tauri.conf.json changes on main, which is what
+# a "Bump the version to ..." commit does. One version, one release: a signed Android APK and the Play bundle, the
+# desktop installers (Linux AppImage, .deb and .rpm; Windows setup .exe), a checksum list for every file, and a
+# changelog. When AUR_PUBLISH is "true" it also updates the AUR package metamorph-bin.
 # It stays off until the repository variable AUTO_RELEASE is "true". Run it by hand from the Actions tab with
-# "publish" turned off to check the Android build works on a runner without signing or releasing anything.
+# "publish" turned off to check every build works on a runner without signing, releasing or publishing anything.
 
 on:
   push:
@@ -187,3 +189,161 @@ jobs:
           [[ "$VERSION" == 0.* ]] && title="$title (pre-release)"
           gh release create "$TAG" "$RUNNER_TEMP/Metamorph-$VERSION-arm64.apk" \
             --target "$GITHUB_SHA" --title "$title" --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
+
+  # The desktop apps build in parallel with the Android one. They only leave workflow artifacts here: the "attach" job
+  # below puts them on the release once the release exists, so a flaky desktop build never blocks the phone release.
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    needs: check
+    if: needs.check.outputs.run == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    # Holds the desktop Google client secret.
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux, os: ubuntu-24.04 }
+          - { name: windows, os: windows-latest }
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Linux build dependencies
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev \
+            libssl-dev patchelf xdg-utils file rpm libfuse2t64
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+          key: desktop-${{ matrix.name }}
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - name: Install web dependencies
+        working-directory: app
+        run: pnpm install --frozen-lockfile
+
+      - name: Desktop Google client (the app signs in with it, through the browser)
+        env:
+          CLIENT_ID: ${{ vars.GOOGLE_DESKTOP_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+            echo "the repository variable GOOGLE_DESKTOP_CLIENT_ID and the release-environment secret GOOGLE_DESKTOP_CLIENT_SECRET must both be set: the desktop app would be built without Google sign-in"
+            exit 1
+          fi
+          # The secret of a Desktop-type client is not confidential (Google says so) but it still stays out of git.
+          {
+            printf 'VITE_GOOGLE_DESKTOP_CLIENT_ID=%s\n' "$CLIENT_ID"
+            printf 'VITE_GOOGLE_DESKTOP_CLIENT_SECRET=%s\n' "$CLIENT_SECRET"
+          } > app/.env.desktop.local
+
+      - name: Build the installers
+        working-directory: app
+        env:
+          NO_STRIP: "true" # linuxdeploy's bundled strip chokes on newer toolchains
+        run: pnpm tauri build
+
+      - name: Name the files
+        run: |
+          out=desktop-out
+          bundle=app/src-tauri/target/release/bundle
+          mkdir -p "$out"
+          if [ "${{ matrix.name }}" = linux ]; then
+            cp "$bundle"/deb/*.deb "$out/Metamorph-$VERSION-linux-amd64.deb"
+            cp "$bundle"/rpm/*.rpm "$out/Metamorph-$VERSION-linux-x86_64.rpm"
+            cp "$bundle"/appimage/*.AppImage "$out/Metamorph-$VERSION-linux-x86_64.AppImage"
+          else
+            cp "$bundle"/nsis/*-setup.exe "$out/Metamorph-$VERSION-windows-x64-setup.exe"
+          fi
+          ls -l "$out"
+
+      - name: Check the Linux packages
+        if: matrix.name == 'linux'
+        run: |
+          deb="desktop-out/Metamorph-$VERSION-linux-amd64.deb"
+          dpkg-deb -f "$deb" Package Version Depends
+          [ "$(dpkg-deb -f "$deb" Package)" = metamorph ] || { echo "unexpected package name"; exit 1; }
+          [ "$(dpkg-deb -f "$deb" Version)" = "$VERSION" ] || { echo "the package version is not $VERSION"; exit 1; }
+          dpkg-deb -c "$deb" | grep -q ' ./usr/bin/metamorph$' || { echo "no /usr/bin/metamorph in the package"; exit 1; }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.name }}-${{ env.VERSION }}
+          path: desktop-out/*
+          retention-days: 30
+          if-no-files-found: error
+
+  attach:
+    name: Attach the desktop apps and checksums
+    needs: [check, release, desktop]
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.check.outputs.version }}
+      TAG: ${{ needs.check.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-*-${{ env.VERSION }}
+          path: desktop
+          merge-multiple: true
+      - name: Put the desktop files on the release
+        run: |
+          ls -l desktop
+          gh release upload "$TAG" desktop/* --clobber
+      - name: Checksums of every file on the release
+        run: |
+          mkdir all
+          gh release download "$TAG" --dir all
+          rm -f all/SHA256SUMS.txt
+          (cd all && sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          gh release upload "$TAG" all/SHA256SUMS.txt --clobber
+
+  aur:
+    name: Update the AUR package
+    needs: [check, attach]
+    # Off until the AUR repository exists and the secret is set (see deploy/README.md).
+    if: needs.check.outputs.publish == 'true' && vars.AUR_PUBLISH == 'true'
+    runs-on: ubuntu-24.04
+    environment: release # holds AUR_SSH_KEY
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.check.outputs.tag }}
+      - name: Set the version
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          sed -i "s/^pkgver=.*/pkgver=$VERSION/; s/^pkgrel=.*/pkgrel=1/" deploy/aur/PKGBUILD
+          grep -E '^pkg(ver|rel)=' deploy/aur/PKGBUILD
+      # Pinned to a commit, not a tag: this action receives the AUR private key.
+      - uses: KSXGitHub/github-actions-deploy-aur@084b0d9b15415bf9cdb65d44dad1efe37a354050 # v4.2.0
+        with:
+          pkgname: metamorph-bin
+          pkgbuild: deploy/aur/PKGBUILD
+          updpkgsums: true
+          test: true
+          commit_username: ${{ vars.AUR_COMMIT_NAME }}
+          commit_email: ${{ vars.AUR_COMMIT_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_KEY }}
+          commit_message: Update to ${{ needs.check.outputs.version }}

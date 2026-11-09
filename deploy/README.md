@@ -153,12 +153,12 @@ If Caddy answers `502` and its log says *permission denied*, SELinux is blocking
 | Workflow | Runs | Does |
 |---|---|---|
 | `ci.yml` | every push and pull request | web type-check, build and tests, script tests |
-| `ci.yml` → `deploy` | push to `main`, after the tests pass, **only when `AUTO_DEPLOY` is `true`** | builds the API in the Fedora container, uploads it, restarts, checks health, **rolls back** if unhealthy |
-| `release.yml` | push to `main` that changes the version in `app/src-tauri/tauri.conf.json`, **only when `AUTO_RELEASE` is `true`** | builds the signed APK and Play bundle, writes a changelog from the commit subjects, publishes a GitHub release |
+| `ci.yml` → `deploy` | push to `main`, after the tests pass, **only when `AUTO_DEPLOY` is `true`** | builds the API (the commit pinned in `deploy/api-ref`) and the web app, uploads them, restarts, checks health, **rolls back** if unhealthy |
+| `release.yml` | push to `main` that changes the version in `app/src-tauri/tauri.conf.json`, **only when `AUTO_RELEASE` is `true`** | builds the signed APK and Play bundle **and the desktop installers** (Linux AppImage, `.deb`, `.rpm`; Windows setup `.exe`), writes a changelog from the commit subjects, publishes one GitHub release with a `SHA256SUMS.txt`, and (when `AUR_PUBLISH` is `true`) updates the AUR package `metamorph-bin` |
 
 To make a release: commit "Bump the version to X.Y.Z" (version in `tauri.conf.json`, `package.json`, `src-tauri/Cargo.toml`) and push. Nothing else.
 The release workflow can also be started by hand (Actions tab → Release → Run workflow); with "publish" off it builds an
-unsigned APK to check the Android toolchain works, and publishes nothing.
+unsigned APK and the desktop installers to check every toolchain works, and publishes nothing.
 
 ### One-time setup
 
@@ -169,6 +169,9 @@ Repository **variables** (Settings → Secrets and variables → Actions → Var
 | `VITE_GOOGLE_CLIENT_ID` | the web OAuth client id (public; it is in the site's JavaScript anyway) |
 | `AUTO_RELEASE` | `true` to publish on version bumps |
 | `AUTO_DEPLOY` | `true` to deploy on push to `main` |
+| `GOOGLE_DESKTOP_CLIENT_ID` | the OAuth client id of type **Desktop app** (public); the desktop installers sign in with it |
+| `AUR_PUBLISH` | `true` to update the AUR package on each release (leave unset until the AUR repository and key exist, see below) |
+| `AUR_COMMIT_NAME`, `AUR_COMMIT_EMAIL` | the name and email on the AUR git commits |
 | `DEPLOY_HOST` | the server's address |
 | `ANDROID_KEY_ALIAS` | optional, defaults to `metamorph` |
 
@@ -178,14 +181,30 @@ Repository **variables** (Settings → Secrets and variables → Actions → Var
 |---|---|---|
 | `release` | `ANDROID_KEYSTORE_B64` | `base64 -w0 ~/.config/metamorph/release.jks` |
 | `release` | `ANDROID_KEYSTORE_PASSWORD` | the password in `release-signing.env` |
+| `release` | `GOOGLE_DESKTOP_CLIENT_SECRET` | the secret of that Desktop client (not confidential for this client type, but kept out of git; it is compiled into the installers) |
+| `release` | `AUR_SSH_KEY` | the private SSH key registered on your AUR account, for pushing `metamorph-bin` |
 | `production` | `DEPLOY_SSH_KEY` | the private half of a key made only for CI |
 | `production` | `DEPLOY_KNOWN_HOSTS` | the server's host key line (`ssh-keygen -F <host>`), so CI checks it is talking to the right machine |
 
-On the `production` environment, add yourself as a **required reviewer**: every deploy then waits for one approval click.
+Optionally add yourself as a **required reviewer** on the `production` or `release` environment: every deploy or release then waits for one approval click.
 
 **Server** (once): `sudo deploy/server/setup-ci-deploy.sh ci-key.pub` creates a `deploy` user that can only be reached with
 that key and may run exactly one thing as root, `/usr/local/sbin/metamorph-deploy` (install, restart, health check, roll back).
 Its behaviour is tested by `deploy/server/test-metamorph-deploy.sh`, which `ci.yml` runs.
+
+### The desktop apps and the AUR package
+
+- The desktop installers are built on GitHub's runners (Linux: Ubuntu, Windows: Windows Server). Both are **unsigned**: Windows
+  SmartScreen warns on first run until the app has a code-signing certificate. They carry the production API address and the
+  desktop Google client, so the build needs `GOOGLE_DESKTOP_CLIENT_ID` and `GOOGLE_DESKTOP_CLIENT_SECRET`.
+- The server's `CORS_ORIGINS` must include `tauri://localhost` (the Linux and macOS desktop window's origin) and
+  `GOOGLE_CLIENT_IDS` must include the desktop client id, or sign-in fails.
+- **AUR (`metamorph-bin`)**: `deploy/aur/PKGBUILD` installs the release's `.deb`. It is a `-bin` package on purpose: the desktop
+  Google client secret is compiled into the official build and is not in the public source. One-time setup: register the SSH key
+  on your AUR account, push the first version by hand (`git clone ssh://aur@aur.archlinux.org/metamorph-bin.git`, copy the
+  PKGBUILD in, `makepkg --printsrcinfo > .SRCINFO`, commit, push), then set `AUR_PUBLISH`, `AUR_COMMIT_NAME`, `AUR_COMMIT_EMAIL` and the
+  `AUR_SSH_KEY` secret; later releases update the package themselves.
+- Test the packaging without releasing anything: run the workflow by hand with "publish" off, and download the `desktop-*` artifacts.
 
 ### Things to know
 

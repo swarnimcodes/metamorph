@@ -27,6 +27,12 @@ has "$out" "sha256sum Metamorph-0.1.1-arm64.apk" "names the file to verify"
 has "$out" "$EXPECT_SUM" "shows the file's real checksum"
 has "$out" "A8:65:3C:F1:82:D5:44:7F:8A:26:D7:3E:8F:66:22:A7:CA:4A:56:B6:71:07:3F:EE:C1:35:9C:46:7F:34:8A:F7" "shows the certificate fingerprint with colons, uppercase"
 
+has "$out" "Install on Android" "has an Android section"
+has "$out" "Metamorph-0.1.1-linux-x86_64.AppImage" "names the Linux AppImage"
+has "$out" "Metamorph-0.1.1-windows-x64-setup.exe" "names the Windows installer"
+has "$out" "SmartScreen" "warns that the Windows installer is not signed"
+has "$out" "SHA256SUMS.txt" "points at the checksum list"
+
 out=$(CERT_SHA256=$CERT ./release-notes.sh 1.0.0 app.apk v0.1.0 HEAD)
 lacks "$out" "pre-release" "a 1.x version is not called a pre-release"
 

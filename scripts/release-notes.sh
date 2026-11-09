@@ -27,11 +27,17 @@ echo "**What's new in $VERSION**"
 "$HERE/changelog.sh" "$FROM" "$TO"
 cat <<TXT
 
-**Install**
+**Install on Android**
 
 - Android 7.0 or newer, on 64-bit ARM (arm64-v8a) phones only.
 - Sign in with Google. It talks to the hosted server at https://metamorph.smarniw.com, so it needs an internet connection and signing in creates an account there.
 - Install by opening the APK on your phone and allowing "install unknown apps" for the app you opened it from. It updates an earlier release in place (same signing key).
+
+**Install on a desktop (Linux and Windows)**
+
+- Linux: \`Metamorph-$VERSION-linux-x86_64.AppImage\` (make it executable, then run it), or the \`.deb\` / \`.rpm\` package. It needs WebKitGTK 4.1 and GTK 3.
+- Windows: \`Metamorph-$VERSION-windows-x64-setup.exe\`. It installs for your user only. It is not code-signed yet, so Windows SmartScreen will warn on first run: choose "More info", then "Run anyway".
+- Signing in with Google opens your browser for the Google step, then returns to the app.
 
 **Verify the download**
 
@@ -40,5 +46,7 @@ sha256sum $NAME
 $SUM
 \`\`\`
 
-Signing certificate SHA-256: \`$CERT_FMT\`
+Signing certificate SHA-256 (the Android app): \`$CERT_FMT\`
+
+\`SHA256SUMS.txt\` on this release lists the checksum of every file, desktop installers included.
 TXT

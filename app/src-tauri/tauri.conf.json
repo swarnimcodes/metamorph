@@ -33,6 +33,14 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
-  }
+    ],
+    "category": "HealthcareFitness",
+    "shortDescription": "Gym workout tracker",
+    "longDescription": "Log workouts, sets and body weight, and follow your progress. Signs in with Google and syncs with your Metamorph account.",
+    "copyright": "Copyright (c) 2026 Swarnim B",
+    "license": "MIT",
+    "licenseFile": "../../LICENSE",
+    "homepage": "https://metamorph.smarniw.com"
+  },
+  "mainBinaryName": "metamorph"
 }
