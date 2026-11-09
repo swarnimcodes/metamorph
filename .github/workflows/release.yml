@@ -198,8 +198,9 @@ jobs:
     if: needs.check.outputs.run == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    # Holds the desktop Google client secret.
-    environment: release
+    # Not in the "release" environment (which only main may use, to guard the Android signing key): the only secret here
+    # is the desktop Google client's, which Google documents as not confidential for this client type, so it is a
+    # plain repository secret and these jobs can also be tried from a branch.
     strategy:
       fail-fast: false
       matrix:
@@ -244,7 +245,7 @@ jobs:
           CLIENT_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
         run: |
           if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
-            echo "the repository variable GOOGLE_DESKTOP_CLIENT_ID and the release-environment secret GOOGLE_DESKTOP_CLIENT_SECRET must both be set: the desktop app would be built without Google sign-in"
+            echo "the repository variable GOOGLE_DESKTOP_CLIENT_ID and the repository secret GOOGLE_DESKTOP_CLIENT_SECRET must both be set: the desktop app would be built without Google sign-in"
             exit 1
           fi
           # The secret of a Desktop-type client is not confidential (Google says so) but it still stays out of git.

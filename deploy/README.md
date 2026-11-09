@@ -181,7 +181,6 @@ Repository **variables** (Settings → Secrets and variables → Actions → Var
 |---|---|---|
 | `release` | `ANDROID_KEYSTORE_B64` | `base64 -w0 ~/.config/metamorph/release.jks` |
 | `release` | `ANDROID_KEYSTORE_PASSWORD` | the password in `release-signing.env` |
-| `release` | `GOOGLE_DESKTOP_CLIENT_SECRET` | the secret of that Desktop client (not confidential for this client type, but kept out of git; it is compiled into the installers) |
 | `release` | `AUR_SSH_KEY` | the private SSH key registered on your AUR account, for pushing `metamorph-bin` |
 | `production` | `DEPLOY_SSH_KEY` | the private half of a key made only for CI |
 | `production` | `DEPLOY_KNOWN_HOSTS` | the server's host key line (`ssh-keygen -F <host>`), so CI checks it is talking to the right machine |
@@ -196,7 +195,7 @@ Its behaviour is tested by `deploy/server/test-metamorph-deploy.sh`, which `ci.y
 
 - The desktop installers are built on GitHub's runners (Linux: Ubuntu, Windows: Windows Server). Both are **unsigned**: Windows
   SmartScreen warns on first run until the app has a code-signing certificate. They carry the production API address and the
-  desktop Google client, so the build needs `GOOGLE_DESKTOP_CLIENT_ID` and `GOOGLE_DESKTOP_CLIENT_SECRET`.
+  desktop Google client, so the build needs the variable `GOOGLE_DESKTOP_CLIENT_ID` and the repository secret `GOOGLE_DESKTOP_CLIENT_SECRET`.
 - The server's `CORS_ORIGINS` must include `tauri://localhost` (the Linux and macOS desktop window's origin) and
   `GOOGLE_CLIENT_IDS` must include the desktop client id, or sign-in fails.
 - **AUR (`metamorph-bin`)**: `deploy/aur/PKGBUILD` installs the release's `.deb`. It is a `-bin` package on purpose: the desktop
