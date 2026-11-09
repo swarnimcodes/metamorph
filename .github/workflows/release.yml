@@ -281,7 +281,7 @@ jobs:
           dpkg-deb -f "$deb" Package Version Depends
           [ "$(dpkg-deb -f "$deb" Package)" = metamorph ] || { echo "unexpected package name"; exit 1; }
           [ "$(dpkg-deb -f "$deb" Version)" = "$VERSION" ] || { echo "the package version is not $VERSION"; exit 1; }
-          dpkg-deb -c "$deb" | grep -q ' ./usr/bin/metamorph$' || { echo "no /usr/bin/metamorph in the package"; exit 1; }
+          dpkg-deb -c "$deb" | grep -qE ' (\./)?usr/bin/metamorph$' || { echo "no /usr/bin/metamorph in the package"; exit 1; }
 
       - uses: actions/upload-artifact@v7
         with:
