@@ -1,13 +1,13 @@
 :root {
   color-scheme: dark;
-  --bg: #121316;
-  --surface: #1c1e22;
-  --surface-2: #272a30;
-  --border: #353941;
-  --text: #ecedee;
-  --text-dim: #a2a8b0;
-  --accent: #6aa8f0;
-  --accent-strong: #8dbcf5;
+  --bg: #111316;
+  --surface: #171a1e;
+  --surface-2: #1f2328;
+  --border: #262a30;
+  --text: #e4e6e8;
+  --text-dim: #8e969e;
+  --accent: #7aa9dc;
+  --accent-strong: #93bbe8;
   --on-accent: #08182b;
   --danger: #ff8a75;
   --danger-bg: #3a1f1a;
@@ -19,15 +19,15 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
-  --radius: 14px;
+  --radius: 12px;
   --radius-sm: 10px;
   --tap: 44px;
   --tabbar-h: 54px;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --column: 520px;
-  --wide: 1120px;   /* Train, Progress, Social on a desktop */
-  --medium: 800px;  /* a workout, an exercise */
-  --sidebar: 232px;
+  --wide: 760px;   /* Train, Progress, Social on a desktop */
+  --medium: 720px;  /* a workout, an exercise */
+  --sidebar: 208px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Cantarell", sans-serif;
 }
 
@@ -533,10 +533,12 @@ a.chip { text-decoration: none; }
   .sidebar-tab svg { width: 24px; height: 24px; flex: none; }
   .sidebar-label { flex: 1; }
   .sidebar-tab kbd {
+    opacity: 0; transition: opacity 140ms;
     min-width: 22px; padding: 1px 6px; text-align: center; font: 500 0.75rem/1.5 var(--font);
     color: var(--text-dim); border: 1px solid var(--border); border-radius: 6px;
   }
   .sidebar-tab[aria-current="page"] { background: var(--surface); color: var(--accent); }
+  .sidebar-tab:hover kbd, .sidebar-tab:focus-visible kbd { opacity: 1; }
   .sidebar-tab[aria-current="page"] kbd { color: var(--accent); border-color: currentColor; }
 
   .screen { padding-inline: var(--space-6); }
@@ -545,16 +547,14 @@ a.chip { text-decoration: none; }
   body:has(.tabbar) .screen { padding-bottom: var(--space-6); }  /* no bottom bar to clear on a wide screen */
 
   /* Train: a big blue bar across 1100px is silly; the history becomes a grid of cards. */
-  .screen.wide > .btn.big { align-self: flex-start; min-width: 280px; }
-  .screen.wide .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-3); }
 
   /* Progress: the summary breathes, body weight and the exercise list sit side by side. */
   .summary { grid-template-columns: repeat(4, minmax(0, 220px)); gap: var(--space-5); }
   .summary dd { font-size: 2rem; }
-  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+  .split { display: flex; flex-direction: column; gap: var(--space-5); }
 
   /* Social: gyms as cards. */
-  .gym-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-3); padding: 0; background: none; border: 0; }
+  .gym-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-2); padding: 0; background: none; border: 0; }
   .gym-grid > li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
   .gym-grid > li + li { border-top: 1px solid var(--border); }
 
@@ -578,3 +578,23 @@ a.chip { text-decoration: none; }
 .google-hint { margin-top: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-dim); font-size: 0.9375rem; text-align: left; display: flex; flex-direction: column; gap: var(--space-2); }
 .google-hint strong { color: var(--text); font-weight: 650; }
 .google-hint .link { min-height: 0; }
+
+/* Page header and calm list rows (Train) */
+.page-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.page-head .btn.primary { min-height: 44px; padding: 0 var(--space-5); }
+.month { display: flex; flex-direction: column; gap: var(--space-2); }
+.history { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+.history li + li { border-top: 1px solid var(--border); }
+.row {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4); min-height: 60px; border: 0; background: transparent; text-align: left;
+  transition: background-color 140ms;
+}
+.row:hover { background: var(--surface-2); }
+.row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.row-title { font-weight: 600; }
+.row-side { flex: none; text-align: right; }
+@media (max-width: 599px) {
+  .row { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .row-side { text-align: left; }
+}
