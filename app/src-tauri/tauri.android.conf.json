@@ -1,5 +1,17 @@
 {
   "build": {
     "beforeBuildCommand": "pnpm build --mode android"
+  },
+  "plugins": {
+    "deep-link": {
+      "mobile": [
+        {
+          "scheme": [
+            "com.smarniw.metamorph"
+          ],
+          "appLink": false
+        }
+      ]
+    }
   }
 }

@@ -598,3 +598,4 @@ a.chip { text-decoration: none; }
   .row { align-items: flex-start; flex-direction: column; gap: 2px; }
   .row-side { text-align: left; }
 }
+.quiet-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; } .quiet-link:hover { color: var(--text); text-decoration: underline; }

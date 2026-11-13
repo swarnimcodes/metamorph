@@ -3,7 +3,16 @@ import { useEffect, useRef, useState } from "react";
 /** How long the desktop app waits before offering to start the browser step again. */
 const BROWSER_SLOW_MS = 12_000;
 import { errMsg } from "../stores/auth";
-import { desktopGoogleConfigured, desktopGoogleSignIn, GOOGLE_CLIENT_ID, nativeGoogleSignIn, renderGoogleButton } from "../lib/google";
+import {
+  androidBrowserGoogleConfigured,
+  androidBrowserGoogleSignIn,
+  desktopGoogleConfigured,
+  desktopGoogleSignIn,
+  GOOGLE_CLIENT_ID,
+  nativeGoogleSignIn,
+  renderGoogleButton,
+  resumeAndroidBrowserSignIn,
+} from "../lib/google";
 import { isAndroidApp, isDesktopApp } from "../lib/platform";
 
 /** Google's "G" mark, unmodified colours. */
@@ -24,7 +33,22 @@ function GoogleG() {
  * loads no script) without a client id.
  */
 export function GoogleButton({ onCredential, disabled }: { onCredential: (idToken: string) => void; disabled?: boolean }) {
-  if (GOOGLE_CLIENT_ID && isAndroidApp()) return <NativeGoogleButton signIn={nativeGoogleSignIn} onCredential={onCredential} disabled={disabled} />;
+  if (isAndroidApp()) {
+    // The account picker needs Google Play services. Without a Play-based client id there is only the browser;
+    // otherwise the browser stays one tap away for phones that lack Play services.
+    if (!GOOGLE_CLIENT_ID) {
+      return androidBrowserGoogleConfigured() ? <NativeGoogleButton signIn={androidBrowserGoogleSignIn} inBrowser resume onCredential={onCredential} disabled={disabled} /> : null;
+    }
+    return (
+      <NativeGoogleButton
+        signIn={nativeGoogleSignIn}
+        browserSignIn={androidBrowserGoogleConfigured() ? androidBrowserGoogleSignIn : undefined}
+        resume
+        onCredential={onCredential}
+        disabled={disabled}
+      />
+    );
+  }
   // The desktop webview cannot open Google's pop-up, so the web button would fail: use the system browser, or show
   // nothing when the desktop client is not configured.
   if (isDesktopApp()) {
@@ -38,17 +62,25 @@ function NativeGoogleButton({
   signIn,
   onCredential,
   disabled,
-  inBrowser,
+  inBrowser: browserOnly,
+  browserSignIn,
+  resume,
 }: {
   signIn: () => Promise<string>;
   onCredential: (idToken: string) => void;
   disabled?: boolean;
   /** The sign-in continues in the user's browser (desktop): say so, and offer a way out if it never finishes. */
   inBrowser?: boolean;
+  /** Android: a second way in through the browser, for phones without Google Play services. */
+  browserSignIn?: () => Promise<string>;
+  /** Android: pick up a browser sign-in the system interrupted by closing the app. */
+  resume?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [viaBrowser, setViaBrowser] = useState(Boolean(browserOnly));
+  const inBrowser = viaBrowser;
   // Only the latest attempt may change the screen: an abandoned one (a closed browser tab) must not.
   const attempt = useRef(0);
 
@@ -58,13 +90,28 @@ function NativeGoogleButton({
     return () => clearTimeout(t);
   }, [picking, inBrowser]);
 
-  async function pick() {
+  useEffect(() => {
+    if (!resume) return;
+    let live = true;
+    resumeAndroidBrowserSignIn().then(
+      (t) => live && t && onCredential(t),
+      (e) => live && setError(errMsg(e)),
+    );
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function pick(browser = browserOnly) {
+    const run = browser ? (browserSignIn ?? signIn) : signIn;
+    setViaBrowser(Boolean(browser));
     const mine = ++attempt.current;
     setPicking(true);
     setSlow(false);
     setError(null);
     try {
-      const token = await signIn();
+      const token = await run();
       if (mine === attempt.current) onCredential(token);
     } catch (e) {
       // Closing the account picker is not worth an error.
@@ -78,21 +125,26 @@ function NativeGoogleButton({
   return (
     <div className="google-wrap" aria-busy={disabled || picking || undefined}>
       <div className={disabled || picking ? "google-slot is-busy" : "google-slot"}>
-        <button type="button" className="google-face google-native" onClick={() => void pick()} disabled={disabled || picking}>
+        <button type="button" className="google-face google-native" onClick={() => void pick(browserOnly)} disabled={disabled || picking}>
           <GoogleG />
           <span>{picking && inBrowser ? "Waiting for your browser…" : "Continue with Google"}</span>
         </button>
       </div>
+      {browserSignIn && !picking && (
+        <button type="button" className="link quiet-link" onClick={() => void pick(true)} disabled={disabled}>
+          Sign in with your browser instead
+        </button>
+      )}
       {picking && inBrowser && (
         <div className="google-hint" role="status">
           <p>
             <strong>Continue in your browser.</strong> We've opened Google's sign-in page there. Choose your
-            account, then come back to this window.
+            account, then return to Metamorph.
           </p>
           {slow && (
             <p>
               Nothing opened, or you closed it?{" "}
-              <button type="button" className="link" onClick={() => void pick()}>
+              <button type="button" className="link" onClick={() => void pick(inBrowser)}>
                 Open it again
               </button>
             </p>
