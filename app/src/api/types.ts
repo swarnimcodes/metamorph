@@ -100,6 +100,8 @@ export interface WorkoutExercise {
   variant_key: string;
   superset_group: number | null;
   notes: string | null;
+  /** The unit this exercise is logged in; null follows the account. Display only: weights are always kg. */
+  weight_unit: UnitSystem | null;
   tags: Tag[];
   sets: WorkoutSet[];
 }

@@ -1,3 +1,5 @@
+import { Toggle } from "@base-ui/react/toggle";
+import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { useEffect, useState } from "react";
 import { ExercisePicker } from "../components/ExercisePicker";
 import { ExternalLink } from "../components/ExternalLink";
@@ -6,11 +8,12 @@ import { directionsUrl } from "../lib/gyms";
 import { SetRow } from "../components/SetRow";
 import { Confirm } from "../components/Sheet";
 import { formatElapsed, formatSet } from "../lib/format";
+import { exerciseUnit } from "../lib/units";
 import { useNow } from "../lib/useNow";
 import { navigate, paths } from "../router";
 import { useAuth } from "../stores/auth";
 import { referenceSet, useWorkout } from "../stores/workout";
-import type { WorkoutExercise } from "../api/types";
+import type { UnitSystem, WorkoutExercise } from "../api/types";
 
 export function ActiveWorkout({ id }: { id: string }) {
   const { workout, loading, error, load, clear, rename, finish, discard } = useWorkout();
@@ -135,10 +138,11 @@ function TitleField({ value, onCommit }: { value: string; onCommit: (v: string) 
 }
 
 function ExerciseCard({ we }: { we: WorkoutExercise }) {
-  const unit = useAuth((s) => s.user?.unit_system ?? "metric");
+  const account = useAuth((s) => s.user?.unit_system ?? "metric");
+  const unit = exerciseUnit(we, account);
   const kind = we.kind;
   const hint = useWorkout((s) => s.hints[`${we.exercise_id}|${we.variant_key}`]);
-  const { loadHint, addSet, removeExercise } = useWorkout.getState();
+  const { loadHint, addSet, removeExercise, setExerciseUnit } = useWorkout.getState();
   const [adding, setAdding] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
@@ -162,6 +166,17 @@ function ExerciseCard({ we }: { we: WorkoutExercise }) {
             </div>
           )}
         </div>
+        {kind !== "duration" && kind !== "distance" && (
+          <ToggleGroup
+            className="type-group unit-toggle"
+            value={[unit]}
+            onValueChange={(v) => v[0] && void setExerciseUnit(we.id, v[0] as UnitSystem)}
+            aria-label={`${we.exercise_name} weight unit`}
+          >
+            <Toggle value="metric" className="type-opt">kg</Toggle>
+            <Toggle value="imperial" className="type-opt">lb</Toggle>
+          </ToggleGroup>
+        )}
         <button className="icon-btn" aria-label={`Remove ${we.exercise_name}`} onClick={() => (we.sets.length ? setConfirmRemove(true) : void removeExercise(we.id))}>
           <span aria-hidden>🗑</span>
         </button>
@@ -170,7 +185,7 @@ function ExerciseCard({ we }: { we: WorkoutExercise }) {
       {we.sets.length > 0 && (
         <ol className="sets">
           {we.sets.map((s, i) => (
-            <SetRow key={s.id} weId={we.id} set={s} index={i} kind={kind} />
+            <SetRow key={s.id} weId={we.id} set={s} index={i} kind={kind} unit={unit} />
           ))}
         </ol>
       )}

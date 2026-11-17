@@ -1,7 +1,7 @@
 import { isTauri } from "../lib/platform";
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UsernameAvailability, Workout,
+  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UnitSystem, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -177,10 +177,12 @@ export const api = {
     request<Workout>("PATCH", `/workouts/${id}`, { body }),
   finishWorkout: (id: string) => request<Workout>("POST", `/workouts/${id}/finish`, { body: {} }),
   deleteWorkout: (id: string) => request<void>("DELETE", `/workouts/${id}`),
-  addExercise: (workoutId: string, exerciseId: string, tagIds: string[]) =>
+  addExercise: (workoutId: string, exerciseId: string, tagIds: string[], weightUnit?: UnitSystem) =>
     request<WorkoutExercise>("POST", `/workouts/${workoutId}/exercises`, {
-      body: { exercise_id: exerciseId, tag_ids: tagIds },
+      body: { exercise_id: exerciseId, tag_ids: tagIds, ...(weightUnit && { weight_unit: weightUnit }) },
     }),
+  setExerciseUnit: (weId: string, weightUnit: UnitSystem) =>
+    request<void>("PATCH", `/workout-exercises/${weId}`, { body: { weight_unit: weightUnit } }),
   removeExercise: (weId: string) => request<void>("DELETE", `/workout-exercises/${weId}`),
   addSet: (weId: string, body: SetInput) => request<WorkoutSet>("POST", `/workout-exercises/${weId}/sets`, { body }),
   bodyWeights: () => request<BodyWeightEntry[]>("GET", "/body-weights"),

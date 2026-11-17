@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   finishWorkout: vi.fn(),
   deleteWorkout: vi.fn(),
   updateWorkout: vi.fn(),
+  setExerciseUnit: vi.fn(),
 }));
 vi.mock("../api/client", async (original) => ({ ...(await original<typeof import("../api/client")>()), api: mocks }));
 vi.mock("../lib/toast", () => ({ toastError: vi.fn() }));
@@ -24,7 +25,7 @@ const WORKOUT: Workout = {
   id: "w1", title: null, gym_id: null, gym: null, started_at: "2026-01-01T09:00:00Z", ended_at: null, timezone: "UTC", notes: null,
   exercises: [{
     id: "we1", exercise_id: "e1", exercise_name: "Bench Press", kind: "weight_reps", position: 1, variant_key: "",
-    superset_group: null, notes: null, tags: [], sets: [SET],
+    superset_group: null, notes: null, weight_unit: null, tags: [], sets: [SET],
   }],
 };
 
@@ -61,5 +62,21 @@ describe.each([
     api.mockRejectedValue(new Error("offline"));
     await act();
     for (const key of WATCHED) expect(isStale(key), JSON.stringify(key)).toBe(true);
+  });
+});
+
+describe("per-exercise unit", () => {
+  it("is a display switch: stored kg is untouched and a failure rolls it back", async () => {
+    mocks.setExerciseUnit.mockResolvedValue(undefined);
+    await useWorkout.getState().setExerciseUnit("we1", "imperial");
+    const we = useWorkout.getState().workout!.exercises[0];
+    expect(we.weight_unit).toBe("imperial");
+    expect(we.sets[0].weight_kg).toBe(40);
+    expect(mocks.setExerciseUnit).toHaveBeenCalledWith("we1", "imperial");
+
+    mocks.setExerciseUnit.mockRejectedValue(new Error("offline"));
+    await useWorkout.getState().setExerciseUnit("we1", "metric");
+    expect(useWorkout.getState().workout!.exercises[0].weight_unit).toBe("imperial");
+    expect(isStale(keys.workouts.detail("w1"))).toBe(true);
   });
 });

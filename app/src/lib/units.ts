@@ -22,6 +22,10 @@ export function displayToKg(value: number, unit: UnitSystem): number {
   return round(unit === "imperial" ? value / LB_PER_KG : value, 3);
 }
 
+/** The unit an exercise is shown in: its own choice, else the account's. Never affects what is stored. */
+export const exerciseUnit = (we: { weight_unit: UnitSystem | null }, account: UnitSystem): UnitSystem =>
+  we.weight_unit ?? account;
+
 export const weightLabel = (unit: UnitSystem): string => (unit === "imperial" ? "lb" : "kg");
 
 export function formatWeight(kg: number | null | undefined, unit: UnitSystem): string {

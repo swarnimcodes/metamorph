@@ -7,6 +7,7 @@ import { workoutChanged } from "../lib/invalidate";
 import { useWorkoutDetail } from "../lib/queries";
 import { formatDate, formatDuration, formatSet, formatTime, plural } from "../lib/format";
 import { toastError } from "../lib/toast";
+import { exerciseUnit } from "../lib/units";
 import { navigate, paths } from "../router";
 import { errMsg, useAuth } from "../stores/auth";
 
@@ -81,7 +82,7 @@ export function WorkoutDetail({ id }: { id: string }) {
                     {we.sets.map((s, i) => (
                       <li key={s.id} data-type={s.set_type}>
                         <span className="recap-n">{i + 1}</span>
-                        <span>{formatSet(s, unit) || "—"}</span>
+                        <span>{formatSet(s, exerciseUnit(we, unit)) || "—"}</span>
                         {s.set_type !== "working" && <span className="chip static">{s.set_type}</span>}
                       </li>
                     ))}

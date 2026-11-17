@@ -1,9 +1,8 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { useState } from "react";
-import type { ExerciseKind, SetInput, SetType, WorkoutSet } from "../api/types";
+import type { ExerciseKind, SetInput, SetType, UnitSystem, WorkoutSet } from "../api/types";
 import { displayToKg, kgToDisplay, weightLabel } from "../lib/units";
-import { useAuth } from "../stores/auth";
 import { useWorkout } from "../stores/workout";
 import { NumField } from "./NumField";
 import { Sheet } from "./Sheet";
@@ -24,10 +23,11 @@ interface Props {
   set: WorkoutSet;
   index: number;
   kind: ExerciseKind;
+  /** The unit this exercise is logged in. */
+  unit: UnitSystem;
 }
 
-export function SetRow({ weId, set, index, kind }: Props) {
-  const unit = useAuth((s) => s.user?.unit_system ?? "metric");
+export function SetRow({ weId, set, index, kind, unit }: Props) {
   const updateSet = useWorkout((s) => s.updateSet);
   const deleteSet = useWorkout((s) => s.deleteSet);
   const [typeOpen, setTypeOpen] = useState(false);

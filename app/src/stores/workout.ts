@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { api } from "../api/client";
 import type {
-  Exercise, ExerciseKind, Gym, LastSession, SetInput, Workout, WorkoutExercise, WorkoutSet,
+  Exercise, ExerciseKind, Gym, LastSession, SetInput, UnitSystem, Workout, WorkoutExercise, WorkoutSet,
 } from "../api/types";
 import { workoutChanged } from "../lib/invalidate";
 import { queryClient } from "../lib/queryClient";
@@ -34,6 +34,7 @@ interface WorkoutState {
   rename: (title: string) => Promise<void>;
   setGym: (gym: Gym) => Promise<void>;
   addExercise: (ex: Exercise, tagIds: string[]) => Promise<boolean>;
+  setExerciseUnit: (weId: string, unit: UnitSystem) => Promise<void>;
   removeExercise: (weId: string) => Promise<void>;
   addSet: (we: WorkoutExercise) => Promise<void>;
   updateSet: (weId: string, setId: string, patch: SetInput) => Promise<void>;
@@ -132,7 +133,8 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     const w = get().workout;
     if (!w) return false;
     try {
-      const we = await api.addExercise(w.id, ex.id, tagIds);
+      // A new exercise starts in the unit of the previous one: you are most likely still at the same gym.
+      const we = await api.addExercise(w.id, ex.id, tagIds, w.exercises.at(-1)?.weight_unit ?? undefined);
       set((s) => ({
         workout: s.workout && { ...s.workout, exercises: [...s.workout.exercises, we] },
       }));
@@ -140,6 +142,21 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     } catch (e) {
       toastError(`Couldn't add exercise: ${errMsg(e)}`);
       return false;
+    } finally {
+      changed();
+    }
+  },
+
+  setExerciseUnit: async (weId, unit) => {
+    const w = get().workout;
+    const prev = w?.exercises.find((e) => e.id === weId)?.weight_unit;
+    if (!w || prev === undefined || prev === unit) return;
+    set({ workout: mapExercises(w, (we) => (we.id === weId ? { ...we, weight_unit: unit } : we)) });
+    try {
+      await api.setExerciseUnit(weId, unit);
+    } catch (e) {
+      set((s) => ({ workout: s.workout && mapExercises(s.workout, (we) => (we.id === weId ? { ...we, weight_unit: prev } : we)) }));
+      toastError(`Couldn't change units: ${errMsg(e)}`);
     } finally {
       changed();
     }

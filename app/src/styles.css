@@ -154,6 +154,8 @@ input::placeholder { color: #6f757e; }
 /* Exercise card and sets */
 .exercise { display: flex; flex-direction: column; gap: var(--space-3); }
 .ex-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+.type-group.unit-toggle { display: inline-grid; grid-template-columns: auto auto; gap: 2px; margin-left: auto; }
+.unit-toggle .type-opt { min-height: 32px; padding: 0 var(--space-3); }
 .ex-head .icon-btn { margin: -6px -8px 0 0; }
 .sets { display: flex; flex-direction: column; gap: var(--space-2); }
 .set-row { display: flex; align-items: center; gap: var(--space-2); }
