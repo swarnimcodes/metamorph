@@ -6,3 +6,7 @@ export const toastManager = Toast.createToastManager();
 export function toastError(message: string): void {
   toastManager.add({ title: message, type: "error", timeout: 4500 });
 }
+
+export function toastInfo(message: string): void {
+  toastManager.add({ title: message, type: "success", timeout: 3000 });
+}

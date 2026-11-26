@@ -297,3 +297,74 @@ export interface ExerciseProgress {
   points: ProgressPoint[];
   records: ProgressRecords;
 }
+
+// ---- Social ---------------------------------------------------------------
+// Anyone can be found; a stranger sees the basics, a friend sees workouts (never notes). Blocking hides both ways.
+
+/** How a person relates to you. `blocked` means you blocked them. */
+export type Relationship = "none" | "friends" | "request_sent" | "request_received" | "blocked" | "self";
+
+export interface Person {
+  id: string;
+  username: string;
+  display_name: string;
+  /** Friends and yourself only; for anyone else the app shows initials. */
+  avatar_url: string | null;
+  relationship: Relationship;
+}
+
+export interface PersonProfile extends Person {
+  member_since: string;
+  /** Finished workouts. */
+  workouts: number;
+  friends_since: string | null;
+}
+
+export interface FriendRequests {
+  incoming: Person[];
+  outgoing: Person[];
+}
+
+export interface FriendWorkout {
+  workout: Workout;
+  likes: number;
+  liked: boolean;
+}
+
+export interface Likes {
+  likes: number;
+  liked: boolean;
+}
+
+export type NotificationKind = "friend_request" | "friend_accepted" | "workout_liked";
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  actor: { id: string; username: string; display_name: string };
+  /** For workout_liked: your own workout. */
+  workout_id: string | null;
+  at: string;
+  read: boolean;
+}
+
+export interface Notifications {
+  unread: number;
+  items: AppNotification[];
+}
+
+export interface ReportPerson {
+  id: string;
+  username: string;
+  display_name: string;
+}
+
+export interface Report {
+  id: string;
+  status: "open" | "resolved";
+  reason: string;
+  at: string;
+  workout_id: string | null;
+  reporter: ReportPerson | null;
+  target: ReportPerson;
+}

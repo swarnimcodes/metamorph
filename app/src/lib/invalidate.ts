@@ -48,6 +48,18 @@ export function gymEdited(client: QueryClient = queryClient): Promise<void> {
   ]).then(() => undefined);
 }
 
+/**
+ * Anything about people changed: a request, an acceptance, an unfriend, a block, a like. Profiles, search results
+ * (their relationship labels), the friend lists, a friend's workouts and your notifications all depend on it.
+ */
+export function socialChanged(client: QueryClient = queryClient): Promise<void> {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: keys.people.all }),
+    client.invalidateQueries({ queryKey: keys.friends.all }),
+    client.invalidateQueries({ queryKey: keys.notifications.all }),
+  ]).then(() => undefined);
+}
+
 /** Sign-out or a different account: nothing cached may survive. */
 export function clearAll(client: QueryClient = queryClient): void {
   client.clear();

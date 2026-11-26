@@ -151,6 +151,80 @@ export function useGymChains(enabled = true) {
   return query.data ?? [];
 }
 
+// ---- social ----
+
+/** People search, debounced; nothing is asked until there are three characters. */
+export function usePeopleSearch(q: string) {
+  const needle = q.trim();
+  const settled = useDebounced(needle, 300);
+  const enabled = settled.length >= 3;
+  const query = useQuery({
+    queryKey: keys.people.search(settled),
+    queryFn: () => api.searchPeople(settled),
+    enabled,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+  return {
+    people: enabled ? (query.data ?? []) : [],
+    searching: needle.length >= 3 && (needle !== settled || query.isFetching),
+    tooShort: needle.length > 0 && needle.length < 3,
+    error: query.isError ? message(query.error) : null,
+  };
+}
+
+export function usePerson(id: string) {
+  const query = useQuery({ queryKey: keys.people.profile(id), queryFn: () => api.getPerson(id) });
+  return { person: query.data ?? null, error: query.isError ? message(query.error) : null, reload: () => void query.refetch() };
+}
+
+export function usePersonWorkouts(id: string, enabled: boolean) {
+  const query = useQuery({ queryKey: keys.people.workouts(id), queryFn: () => api.personWorkouts(id), enabled });
+  return { workouts: query.data ?? [], loading: enabled && query.isPending };
+}
+
+export function usePersonWorkout(id: string, workoutId: string) {
+  const query = useQuery({ queryKey: keys.people.workout(id, workoutId), queryFn: () => api.personWorkout(id, workoutId) });
+  return { data: query.data ?? null, error: query.isError ? message(query.error) : null };
+}
+
+export function useFriends() {
+  const query = useQuery({ queryKey: keys.friends.list(), queryFn: () => api.friends() });
+  return { friends: query.data ?? [], loading: query.isPending };
+}
+
+export function useFriendRequests() {
+  const query = useQuery({ queryKey: keys.friends.requests(), queryFn: () => api.friendRequests() });
+  return { incoming: query.data?.incoming ?? [], outgoing: query.data?.outgoing ?? [] };
+}
+
+export function useBlocked() {
+  const query = useQuery({ queryKey: keys.friends.blocked(), queryFn: () => api.blocks() });
+  return query.data ?? [];
+}
+
+export function useNotifications() {
+  const query = useQuery({ queryKey: keys.notifications.list(), queryFn: () => api.notifications() });
+  return { data: query.data ?? null, loading: query.isPending, error: query.isError ? message(query.error) : null };
+}
+
+/** The badge number. Checked again every minute and when the app comes back to the front. */
+export function useUnreadCount(enabled = true) {
+  const query = useQuery({
+    queryKey: keys.notifications.unread(),
+    queryFn: () => api.unreadNotifications(),
+    enabled,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+  return query.data?.count ?? 0;
+}
+
+export function useReports(status: "open" | "resolved") {
+  const query = useQuery({ queryKey: keys.reports.list(status), queryFn: () => api.reports(status) });
+  return { reports: query.data ?? [], loading: query.isPending, error: query.isError ? message(query.error) : null };
+}
+
 export function useExerciseSearch(q: string, enabled = true) {
   const needle = q.trim();
   const settled = useDebounced(needle, needle ? 250 : 0);

@@ -9,6 +9,10 @@ export type Route =
   | { name: "social" }
   | { name: "stats" }
   | { name: "gym"; id: string }
+  | { name: "person"; id: string }
+  | { name: "friendWorkout"; id: string; workoutId: string }
+  | { name: "notifications" }
+  | { name: "reports" }
   | {
       name: "exercise";
       id: string;
@@ -37,6 +41,10 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === "stats") return { name: "stats" };
   if (parts[0] === "workout" && parts[1]) return { name: "workout", id: parts[1] };
   if (parts[0] === "history" && parts[1]) return { name: "detail", id: parts[1] };
+  if (parts[0] === "people" && parts[1] && parts[2] === "workouts" && parts[3]) return { name: "friendWorkout", id: parts[1], workoutId: parts[3] };
+  if (parts[0] === "people" && parts[1]) return { name: "person", id: parts[1] };
+  if (parts[0] === "notifications") return { name: "notifications" };
+  if (parts[0] === "reports") return { name: "reports" };
   if (parts[0] === "gyms" && parts[1]) return { name: "gym", id: parts[1] };
   if (parts[0] === "social") return { name: "social" };
   if (parts[0] === "you" || parts[0] === "settings") return { name: "you" };
@@ -75,4 +83,8 @@ export const paths = {
   workout: (id: string) => `/workout/${id}`,
   detail: (id: string) => `/history/${id}`,
   gym: (id: string) => `/gyms/${id}`,
+  person: (id: string) => `/people/${id}`,
+  friendWorkout: (id: string, workoutId: string) => `/people/${id}/workouts/${workoutId}`,
+  notifications: "/notifications",
+  reports: "/reports",
 };

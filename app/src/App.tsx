@@ -5,9 +5,13 @@ import { Toasts } from "./components/Toasts";
 import { shortcutFor } from "./lib/shortcuts";
 import { navigate, paths, useRoute } from "./router";
 import { ActiveWorkout } from "./screens/ActiveWorkout";
+import { FriendWorkout } from "./screens/FriendWorkout";
 import { GymPage } from "./screens/GymPage";
 import { Home } from "./screens/Home";
 import { Login } from "./screens/Login";
+import { Notifications } from "./screens/Notifications";
+import { PersonPage } from "./screens/PersonPage";
+import { Reports } from "./screens/Reports";
 import { ExerciseProgress } from "./screens/ExerciseProgress";
 import { Social } from "./screens/Social";
 import { Stats } from "./screens/Stats";
@@ -79,6 +83,10 @@ export default function App() {
   else if (route.name === "exercise") content = <ExerciseProgress id={route.id} variant={route.variant} from={route.from} />;
   else if (route.name === "you") content = <You />;
   else if (route.name === "gym") content = <GymPage id={route.id} />;
+  else if (route.name === "person") content = <PersonPage id={route.id} />;
+  else if (route.name === "friendWorkout") content = <FriendWorkout id={route.id} workoutId={route.workoutId} />;
+  else if (route.name === "notifications") content = <Notifications />;
+  else if (route.name === "reports") content = <Reports />;
   else if (route.name === "social") content = <Social />;
   else content = <Home />;
 
@@ -90,9 +98,9 @@ export default function App() {
       ? "train"
       : route.name === "stats" || route.name === "exercise"
         ? "progress"
-        : route.name === "social" || route.name === "gym"
+        : route.name === "social" || route.name === "gym" || route.name === "person" || route.name === "friendWorkout" || route.name === "notifications"
           ? "social"
-          : route.name === "you"
+          : route.name === "you" || route.name === "reports"
             ? "you"
             : null;
 

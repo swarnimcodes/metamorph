@@ -1,7 +1,7 @@
 import { isTauri } from "../lib/platform";
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, GymDetail, GymEdit, GymUpdate, LastSession, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UnitSystem, UsernameAvailability, Workout,
+  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, FriendRequests, FriendWorkout, Gym, GymDetail, GymEdit, GymUpdate, LastSession, Likes, Notifications, Person, PersonProfile, Relationship, Report, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UnitSystem, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -204,6 +204,28 @@ export const api = {
   revertGymEdit: (id: string, editId: string) => request<Gym>("POST", `/gyms/${id}/history/${editId}/revert`, { body: {} }),
   gymHistory: (id: string) => request<GymEdit[]>("GET", `/gyms/${id}/history`),
   gymChains: () => request<string[]>("GET", "/gyms/chains"),
+
+  // ---- social ----
+  searchPeople: (q: string) => request<Person[]>("GET", "/people", { query: { q } }),
+  getPerson: (id: string) => request<PersonProfile>("GET", `/people/${id}`),
+  personWorkouts: (id: string, limit = 50) => request<WorkoutSummary[]>("GET", `/people/${id}/workouts`, { query: { limit } }),
+  personWorkout: (id: string, workoutId: string) => request<FriendWorkout>("GET", `/people/${id}/workouts/${workoutId}`),
+  likeWorkout: (id: string, workoutId: string) => request<Likes>("PUT", `/people/${id}/workouts/${workoutId}/like`, { body: {} }),
+  unlikeWorkout: (id: string, workoutId: string) => request<Likes>("DELETE", `/people/${id}/workouts/${workoutId}/like`),
+  sendFriendRequest: (id: string) => request<{ relationship: Relationship }>("POST", `/people/${id}/friend-request`, { body: {} }),
+  acceptFriendRequest: (id: string) => request<{ relationship: Relationship }>("POST", `/people/${id}/accept`, { body: {} }),
+  removeFriendship: (id: string) => request<{ relationship: Relationship }>("DELETE", `/people/${id}/friendship`),
+  blockPerson: (id: string) => request<void>("PUT", `/people/${id}/block`, { body: {} }),
+  unblockPerson: (id: string) => request<void>("DELETE", `/people/${id}/block`),
+  friends: () => request<Person[]>("GET", "/friends"),
+  friendRequests: () => request<FriendRequests>("GET", "/friends/requests"),
+  blocks: () => request<Person[]>("GET", "/blocks"),
+  notifications: () => request<Notifications>("GET", "/notifications"),
+  unreadNotifications: () => request<{ count: number }>("GET", "/notifications/unread"),
+  markNotificationsRead: () => request<void>("POST", "/notifications/read", { body: {} }),
+  report: (body: { user_id: string; workout_id?: string; reason: string }) => request<void>("POST", "/reports", { body }),
+  reports: (status: "open" | "resolved" = "open") => request<Report[]>("GET", "/reports", { query: { status } }),
+  resolveReport: (id: string) => request<void>("POST", `/reports/${id}/resolve`, { body: {} }),
   consistency: (weeks?: number) => request<Consistency>("GET", "/stats/consistency", { query: { weeks } }),
   statsExercises: () => request<StatsExercise[]>("GET", "/stats/exercises"),
   /** variantKey: undefined = all variations, "" = untagged only. */

@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useUnreadCount } from "../lib/queries";
 import { paths } from "../router";
 
 export type Tab = "train" | "progress" | "social" | "you";
@@ -17,6 +18,13 @@ export const TABS: { id: Tab; label: string; href: string; glyph: ReactNode }[] 
   { id: "social", label: "Social", href: `#${paths.social}`, glyph: icon(<><circle cx="9" cy="8.5" r="3.25" /><path d="M2.75 19.5c.7-3.4 3.2-5.25 6.25-5.25s5.55 1.85 6.25 5.25" /><path d="M15.5 5.6a3.25 3.25 0 0 1 0 5.8" /><path d="M17.5 14.6c2 .6 3.3 2.2 3.75 4.9" /></>) },
   { id: "you", label: "You", href: `#${paths.you}`, glyph: icon(<><circle cx="12" cy="8" r="3.75" /><path d="M4.5 20.5c.8-3.9 3.9-6 7.5-6s6.7 2.1 7.5 6" /></>) },
 ];
+
+/** The unread-notifications dot on the Social tab. */
+export function NavBadge({ tab }: { tab: Tab }) {
+  const unread = useUnreadCount(tab === "social");
+  if (tab !== "social" || unread === 0) return null;
+  return <span className="badge nav-badge" aria-label={`${unread} unread notifications`}>{unread > 99 ? "99+" : unread}</span>;
+}
 
 /** Icon-only main navigation, pinned to the bottom. `current` is null on screens that belong to no tab. */
 export function TabBar({ current }: { current: Tab | null }) {
@@ -37,6 +45,7 @@ export function TabBar({ current }: { current: Tab | null }) {
             aria-current={t.id === current ? "page" : undefined}
           >
             {t.glyph}
+            <NavBadge tab={t.id} />
           </a>
         ))}
       </div>

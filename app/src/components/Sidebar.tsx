@@ -1,5 +1,5 @@
 import { LogoMark } from "./LogoMark";
-import { TABS, type Tab } from "./TabBar";
+import { NavBadge, TABS, type Tab } from "./TabBar";
 
 /**
  * Main navigation on wide screens: labelled, with the 1-4 keys shown. Hidden by CSS below 900px, where the bottom
@@ -23,6 +23,7 @@ export function Sidebar({ current }: { current: Tab | null }) {
             >
               {t.glyph}
               <span className="sidebar-label">{t.label}</span>
+              <NavBadge tab={t.id} />
               <kbd aria-hidden="true">{i + 1}</kbd>
             </a>
           </li>

@@ -7,6 +7,7 @@ import { BUILD_LABEL } from "../lib/build";
 import { PRIVACY_URL } from "../lib/links";
 import type { UnitSystem } from "../api/types";
 import { toastError } from "../lib/toast";
+import { navigate, paths } from "../router";
 import { errMsg, useAuth } from "../stores/auth";
 
 const UNITS: { value: UnitSystem; label: string }[] = [
@@ -59,6 +60,13 @@ export function You() {
         </ToggleGroup>
         <p className="dim small">Weights are stored in kg and converted for display.</p>
       </section>
+
+      {user && user.role !== "user" && (
+        <section className="card stack" aria-label="Moderation">
+          <h2>Moderation</h2>
+          <button className="btn" onClick={() => navigate(paths.reports)}>Reports</button>
+        </section>
+      )}
 
       <button className="btn danger-text" onClick={logout}>Log out</button>
 
