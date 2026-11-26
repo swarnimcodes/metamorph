@@ -55,13 +55,13 @@ function Profile({ person }: { person: PersonProfile }) {
           {rel === "request_sent" && (
             <>
               <span className="chip static">Request sent</span>
-              <button className="btn" disabled={busy} onClick={() => void remove(person.id)}>Cancel</button>
+              <button className="btn" disabled={busy} onClick={() => void remove(person.id, true)}>Cancel</button>
             </>
           )}
           {rel === "request_received" && (
             <>
               <button className="btn primary" disabled={busy} onClick={() => void accept(person.id)}>Accept</button>
-              <button className="btn" disabled={busy} onClick={() => void remove(person.id)}>Decline</button>
+              <button className="btn" disabled={busy} onClick={() => void remove(person.id, true)}>Decline</button>
             </>
           )}
           {isFriend && <button className="btn" disabled={busy} onClick={() => setConfirm("unfriend")}>Friends ✓</button>}

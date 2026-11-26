@@ -29,7 +29,8 @@ export function usePersonActions() {
     busy,
     send: (id: string) => run("send the request", () => api.sendFriendRequest(id)),
     accept: (id: string) => run("accept the request", () => api.acceptFriendRequest(id)),
-    remove: (id: string) => run("update the friendship", () => api.removeFriendship(id)),
+    /** Cancel or decline a request: with `pendingOnly` an accepted friendship is never ended by a stale screen. */
+    remove: (id: string, pendingOnly = false) => run("update the friendship", () => api.removeFriendship(id, pendingOnly)),
     block: (id: string) => run("block", () => api.blockPerson(id)),
     unblock: (id: string) => run("unblock", () => api.unblockPerson(id)),
   };

@@ -52,10 +52,10 @@ export function RequestRow({ person, direction }: { person: Person; direction: "
       {direction === "incoming" ? (
         <span className="row-buttons">
           <button className="btn small-btn" disabled={busy} onClick={() => void accept(person.id)}>Accept</button>
-          <button className="btn quiet small-btn" disabled={busy} onClick={() => void remove(person.id)}>Decline</button>
+          <button className="btn quiet small-btn" disabled={busy} onClick={() => void remove(person.id, true)}>Decline</button>
         </span>
       ) : (
-        <button className="btn quiet small-btn" disabled={busy} onClick={() => void remove(person.id)}>Cancel</button>
+        <button className="btn quiet small-btn" disabled={busy} onClick={() => void remove(person.id, true)}>Cancel</button>
       )}
     </li>
   );

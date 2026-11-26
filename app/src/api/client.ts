@@ -214,7 +214,8 @@ export const api = {
   unlikeWorkout: (id: string, workoutId: string) => request<Likes>("DELETE", `/people/${id}/workouts/${workoutId}/like`),
   sendFriendRequest: (id: string) => request<{ relationship: Relationship }>("POST", `/people/${id}/friend-request`, { body: {} }),
   acceptFriendRequest: (id: string) => request<{ relationship: Relationship }>("POST", `/people/${id}/accept`, { body: {} }),
-  removeFriendship: (id: string) => request<{ relationship: Relationship }>("DELETE", `/people/${id}/friendship`),
+  removeFriendship: (id: string, pendingOnly = false) =>
+    request<{ relationship: Relationship }>("DELETE", `/people/${id}/friendship`, { query: pendingOnly ? { pending_only: "true" } : undefined }),
   blockPerson: (id: string) => request<void>("PUT", `/people/${id}/block`, { body: {} }),
   unblockPerson: (id: string) => request<void>("DELETE", `/people/${id}/block`),
   friends: () => request<Person[]>("GET", "/friends"),
