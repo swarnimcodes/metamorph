@@ -93,20 +93,19 @@ export function navigate(path: string, opts: { replace?: boolean } = {}): void {
     apply();
     return;
   }
-  const root = document.documentElement;
-  root.classList.add("vt-active");
-  const transition = doc.startViewTransition!(
+  doc.startViewTransition!(
     () =>
-      // The new screen is on the page once the hash changed and React has drawn it a frame later.
+      // The new screen is on the page once the hash changed and React has drawn it, a frame later at most.
       new Promise<void>((resolve) => {
-        const done = () => requestAnimationFrame(() => resolve());
+        const done = () => {
+          requestAnimationFrame(() => resolve());
+          setTimeout(resolve, 80); // a hidden tab pauses animation frames; do not wait for one
+        };
         window.addEventListener("hashchange", done, { once: true });
         setTimeout(resolve, 400); // never leave the page frozen if the hash does not change
         apply();
       }),
   );
-  const finish = () => root.classList.remove("vt-active");
-  transition.finished.then(finish, finish);
 }
 
 /** Send plain in-app links (`<a href="#/...">`, like the tab bar) through navigate() so they animate too. */

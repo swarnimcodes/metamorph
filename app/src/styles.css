@@ -686,8 +686,12 @@ details > summary { cursor: pointer; padding: var(--space-2) 0; }
 ::view-transition-new(root) { animation: 220ms var(--ease) both vt-in; }
 @keyframes vt-out { to { opacity: 0; } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(8px); } }
-/* The screens already fade themselves in when they mount; during a transition that would play twice. */
-html.vt-active .screen, html.vt-active .screen > :not(.bar) { animation: none; }
+/* A screen fades itself in when it mounts, for browsers that cannot animate the move between screens. Where they can
+   (every browser that knows view-transition-name), the transition does it, and a second animation here would play
+   again the instant the transition ended: a visible blink after every tab switch. */
+@supports (view-transition-name: none) {
+  .screen, .screen > :not(.bar) { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
 }
