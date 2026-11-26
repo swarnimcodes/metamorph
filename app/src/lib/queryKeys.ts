@@ -27,6 +27,7 @@ export const keys = {
     search: (q: string) => ["people", "search", q] as const,
     profile: (id: string) => ["people", "profile", id] as const,
     workouts: (id: string) => ["people", "workouts", id] as const,
+    consistency: (id: string) => ["people", "consistency", id] as const,
     workout: (id: string, workoutId: string) => ["people", "workout", id, workoutId] as const,
   },
   friends: {

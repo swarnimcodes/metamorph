@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRoute, paths } from "./router";
+import { parseRoute, paths, shouldAnimate } from "./router";
 
 const WORKOUT = "01a18388-81e5-7110-ac64-dc7d9eefe3bc";
 const EXERCISE = "01a18392-f771-7406-a324-829efd0fdf1f";
@@ -40,5 +40,18 @@ describe("tab routes", () => {
     expect(parseRoute(`#${paths.you}`)).toEqual({ name: "you" });
     expect(parseRoute(`#${paths.social}`)).toEqual({ name: "social" });
     expect(parseRoute("#/settings")).toEqual({ name: "you" });
+  });
+});
+
+describe("shouldAnimate", () => {
+  const base = { supported: true, reducedMotion: false, same: false };
+  it("animates a real change where the browser can", () => {
+    expect(shouldAnimate(base)).toBe(true);
+  });
+  it("stays still when asked for less motion, when unsupported, for the same screen, and for redirects", () => {
+    expect(shouldAnimate({ ...base, reducedMotion: true })).toBe(false);
+    expect(shouldAnimate({ ...base, supported: false })).toBe(false);
+    expect(shouldAnimate({ ...base, same: true })).toBe(false);
+    expect(shouldAnimate({ ...base, replace: true })).toBe(false);
   });
 });

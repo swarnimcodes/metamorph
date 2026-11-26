@@ -7,6 +7,7 @@ import { directionsUrl, gymLine } from "../lib/gyms";
 import { useBlocked, useFriendRequests, useFriends, usePeopleSearch, useUnreadCount } from "../lib/queries";
 import { useGymSearch } from "../lib/useGymSearch";
 import { navigate, paths } from "../router";
+import { SkeletonPeople, SkeletonRows } from "../components/Skeleton";
 
 type Section = "friends" | "find" | "gyms";
 const SECTIONS: { id: Section; label: string }[] = [
@@ -65,7 +66,7 @@ function FriendsSection({ onFind }: { onFind: () => void }) {
 
       <section className="stack" aria-labelledby="friends-h">
         <h2 id="friends-h">Friends{friends.length > 0 && ` · ${friends.length}`}</h2>
-        {loading && <p className="dim empty">Loading…</p>}
+        {loading && <SkeletonPeople count={3} />}
         {!loading && friends.length === 0 && (
           <div className="stack">
             <p className="dim empty">No friends yet. Search for someone by name or username.</p>
@@ -118,6 +119,7 @@ function FindSection() {
           {people.map((p) => <PersonRow key={p.id} person={p} />)}
         </ul>
       )}
+      {searching && people.length === 0 && <SkeletonPeople count={3} />}
       {ready && !searching && !error && people.length === 0 && <p className="dim empty">No one found.</p>}
       <p className="dim small">
         People can find you by name or username and see when you joined. Your workouts stay private until you're friends.
@@ -158,7 +160,7 @@ function GymsSection() {
             ))}
           </ul>
         )}
-        {loading && found.length === 0 && <p className="dim empty" role="status">Loading gyms…</p>}
+        {loading && found.length === 0 && <SkeletonRows count={4} label="Loading gyms" />}
         {!loading && found.length === 0 && <p className="dim empty">{q.trim() ? "No gyms match." : "No gyms yet."}</p>}
       </section>
 

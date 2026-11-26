@@ -1,6 +1,6 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { ExerciseKind, SetInput, SetType, UnitSystem, WorkoutSet } from "../api/types";
 import { displayToKg, kgToDisplay, weightLabel } from "../lib/units";
 import { useWorkout } from "../stores/workout";
@@ -27,7 +27,7 @@ interface Props {
   unit: UnitSystem;
 }
 
-export function SetRow({ weId, set, index, kind, unit }: Props) {
+export const SetRow = memo(function SetRow({ weId, set, index, kind, unit }: Props) {
   const updateSet = useWorkout((s) => s.updateSet);
   const deleteSet = useWorkout((s) => s.deleteSet);
   const [typeOpen, setTypeOpen] = useState(false);
@@ -127,4 +127,4 @@ export function SetRow({ weId, set, index, kind, unit }: Props) {
       </Sheet>
     </li>
   );
-}
+});

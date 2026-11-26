@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type {
   Exercise, ExerciseKind, Gym, LastSession, SetInput, UnitSystem, Workout, WorkoutExercise, WorkoutSet,
 } from "../api/types";
+import { haptic } from "../lib/haptics";
 import { workoutChanged } from "../lib/invalidate";
 import { queryClient } from "../lib/queryClient";
 import { keys } from "../lib/queryKeys";
@@ -138,6 +139,7 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
       set((s) => ({
         workout: s.workout && { ...s.workout, exercises: [...s.workout.exercises, we] },
       }));
+      haptic("tap");
       return true;
     } catch (e) {
       toastError(`Couldn't add exercise: ${errMsg(e)}`);
@@ -190,6 +192,7 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     try {
       const created = await api.addSet(we.id, body);
       set((s) => ({ workout: s.workout && mapSets(s.workout, we.id, (sets) => [...sets, created]) }));
+      haptic("tap");
     } catch (e) {
       toastError(`Couldn't add set: ${errMsg(e)}`);
     } finally {
@@ -243,6 +246,7 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     if (!w) return false;
     try {
       await api.finishWorkout(w.id);
+      haptic("success");
       return true;
     } catch (e) {
       toastError(`Couldn't finish workout: ${errMsg(e)}`);

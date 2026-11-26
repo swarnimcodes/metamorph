@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../api/client";
+import { haptic } from "./haptics";
 import { socialChanged } from "./invalidate";
 import { toastError } from "./toast";
 import { errMsg } from "../stores/auth";
@@ -27,8 +28,8 @@ export function usePersonActions() {
 
   return {
     busy,
-    send: (id: string) => run("send the request", () => api.sendFriendRequest(id)),
-    accept: (id: string) => run("accept the request", () => api.acceptFriendRequest(id)),
+    send: (id: string) => run("send the request", () => api.sendFriendRequest(id)).then((ok) => (ok && haptic("tap"), ok)),
+    accept: (id: string) => run("accept the request", () => api.acceptFriendRequest(id)).then((ok) => (ok && haptic("success"), ok)),
     /** Cancel or decline a request: with `pendingOnly` an accepted friendship is never ended by a stale screen. */
     remove: (id: string, pendingOnly = false) => run("update the friendship", () => api.removeFriendship(id, pendingOnly)),
     block: (id: string) => run("block", () => api.blockPerson(id)),

@@ -5,6 +5,7 @@ import { useWorkout } from "../stores/workout";
 import { gymLine } from "../lib/gyms";
 import { CreateGym } from "./CreateGym";
 import { Sheet } from "./Sheet";
+import { SkeletonRows } from "./Skeleton";
 
 type View = "pick" | "create";
 
@@ -60,7 +61,7 @@ export function GymPicker({ open, onOpenChange }: { open: boolean; onOpenChange:
             </ul>
           )}
 
-          {loading && found.length === 0 && <p className="dim empty" role="status">Loading gyms…</p>}
+          {loading && found.length === 0 && <SkeletonRows count={4} label="Loading gyms" />}
           {!loading && found.length === 0 && <p className="dim empty">No gyms found.</p>}
           <button className="btn" onClick={() => setView("create")}>Create new gym</button>
         </div>

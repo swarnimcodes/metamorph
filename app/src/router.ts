@@ -64,10 +64,60 @@ export function useRoute(): Route {
   return parseRoute(useSyncExternalStore(subscribe, snapshot));
 }
 
+/** Whether moving to another screen should be animated: only where the browser can, the person hasn't asked for less motion, and it is a real change. */
+export function shouldAnimate(o: { supported: boolean; reducedMotion: boolean; same: boolean; replace?: boolean }): boolean {
+  return o.supported && !o.reducedMotion && !o.same && !o.replace;
+}
+
+type ViewTransitionDocument = Document & { startViewTransition?: (update: () => Promise<void>) => { finished: Promise<void> } };
+
+/**
+ * Go to another screen. In browsers with the View Transitions API (Chrome, Android's WebView) the old screen fades
+ * out and the new one rises in; anywhere else, or with reduced motion on, it just changes. The back button and a
+ * typed address change instantly: the browser gives us no moment to wrap those.
+ */
 export function navigate(path: string, opts: { replace?: boolean } = {}): void {
   const target = `#${path}`;
-  if (opts.replace) window.location.replace(target);
-  else window.location.hash = target;
+  const apply = () => {
+    if (opts.replace) window.location.replace(target);
+    else window.location.hash = target;
+  };
+  const doc = document as ViewTransitionDocument;
+  const animate = shouldAnimate({
+    supported: typeof doc.startViewTransition === "function",
+    reducedMotion: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
+    same: window.location.hash === target,
+    replace: opts.replace,
+  });
+  if (!animate) {
+    apply();
+    return;
+  }
+  const root = document.documentElement;
+  root.classList.add("vt-active");
+  const transition = doc.startViewTransition!(
+    () =>
+      // The new screen is on the page once the hash changed and React has drawn it a frame later.
+      new Promise<void>((resolve) => {
+        const done = () => requestAnimationFrame(() => resolve());
+        window.addEventListener("hashchange", done, { once: true });
+        setTimeout(resolve, 400); // never leave the page frozen if the hash does not change
+        apply();
+      }),
+  );
+  const finish = () => root.classList.remove("vt-active");
+  transition.finished.then(finish, finish);
+}
+
+/** Send plain in-app links (`<a href="#/...">`, like the tab bar) through navigate() so they animate too. */
+export function installLinkTransitions(): void {
+  document.addEventListener("click", (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = (e.target as Element | null)?.closest?.("a[href^='#/']");
+    if (!a || a.getAttribute("target")) return;
+    e.preventDefault();
+    navigate(a.getAttribute("href")!.slice(1));
+  });
 }
 
 export const paths = {

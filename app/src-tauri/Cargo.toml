@@ -26,6 +26,10 @@ serde_json = "1"
 tauri-plugin-google-auth = "0.5.1"
 tauri-plugin-deep-link = "2"
 
+# Haptic feedback exists only on phones, so the crate is only built for them.
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-haptics = "2"
+
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

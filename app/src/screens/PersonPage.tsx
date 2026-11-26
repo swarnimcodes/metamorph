@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Avatar } from "../components/Avatar";
+import { Heatmap } from "../components/Heatmap";
 import { ReportSheet } from "../components/ReportSheet";
 import { Confirm } from "../components/Sheet";
-import { formatDate } from "../lib/format";
-import { usePerson, usePersonWorkouts } from "../lib/queries";
+import { formatDate, plural } from "../lib/format";
+import { usePerson, usePersonConsistency, usePersonWorkouts } from "../lib/queries";
 import { usePersonActions } from "../lib/usePersonActions";
 import { navigate, paths } from "../router";
+import { useAuth } from "../stores/auth";
 import type { PersonProfile } from "../api/types";
+import { SkeletonCard, SkeletonProfile, SkeletonRows } from "../components/Skeleton";
 
 function memberSince(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "long", year: "numeric" });
@@ -25,7 +28,7 @@ export function PersonPage({ id }: { id: string }) {
           <button className="btn" onClick={reload}>Retry</button>
         </div>
       )}
-      {!person && !error && <p className="dim empty">Loading…</p>}
+      {!person && !error && <SkeletonProfile />}
       {person && <Profile person={person} />}
     </main>
   );
@@ -38,6 +41,8 @@ function Profile({ person }: { person: PersonProfile }) {
   const rel = person.relationship;
   const isFriend = rel === "friends";
   const { workouts, loading } = usePersonWorkouts(person.id, isFriend);
+  const { data: calendar, loading: calendarLoading } = usePersonConsistency(person.id, isFriend);
+  const unit = useAuth((s) => s.user?.unit_system ?? "metric");
 
   return (
     <>
@@ -80,10 +85,22 @@ function Profile({ person }: { person: PersonProfile }) {
         )}
       </section>
 
+      {isFriend && calendarLoading && <SkeletonCard lines={4} />}
+      {isFriend && calendar && (
+        <section className="card stack" aria-labelledby="friend-activity-h">
+          <h2 id="friend-activity-h">Activity</h2>
+          <Heatmap data={calendar} unit={unit} />
+          <p className="dim small">
+            {plural(calendar.totals.workouts, "workout")} · {plural(calendar.totals.active_days, "active day")} ·{" "}
+            {calendar.streak.current_weeks} week streak
+          </p>
+        </section>
+      )}
+
       {isFriend && (
         <section className="stack" aria-labelledby="friend-workouts-h">
           <h2 id="friend-workouts-h">Workouts</h2>
-          {loading && <p className="dim empty">Loading…</p>}
+          {loading && <SkeletonRows count={3} label="Loading workouts" />}
           {!loading && workouts.length === 0 && <p className="dim empty">No workouts yet.</p>}
           {workouts.length > 0 && (
             <ul className="card history">

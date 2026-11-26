@@ -1,6 +1,6 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { ExercisePicker } from "../components/ExercisePicker";
 import { ExternalLink } from "../components/ExternalLink";
 import { GymPicker } from "../components/GymPicker";
@@ -14,10 +14,15 @@ import { navigate, paths } from "../router";
 import { useAuth } from "../stores/auth";
 import { referenceSet, useWorkout } from "../stores/workout";
 import type { UnitSystem, WorkoutExercise } from "../api/types";
+import { SkeletonDetail } from "../components/Skeleton";
 
 export function ActiveWorkout({ id }: { id: string }) {
-  const { workout, loading, error, load, clear, rename, finish, discard } = useWorkout();
-  const now = useNow(1000);
+  // Pick the pieces this screen draws instead of subscribing to the whole store, and keep the clock in its own
+  // component: a ticking clock must redraw one number, not every set of the workout.
+  const workout = useWorkout((s) => s.workout);
+  const loading = useWorkout((s) => s.loading);
+  const error = useWorkout((s) => s.error);
+  const { load, clear, rename, finish, discard } = useWorkout.getState();
   const [pickExercise, setPickExercise] = useState(false);
   const [pickGym, setPickGym] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -37,7 +42,7 @@ export function ActiveWorkout({ id }: { id: string }) {
             {error} <button className="link" onClick={() => void load(id)}>Retry</button>
           </p>
         ) : (
-          <p className="dim empty">{loading ? "Loading…" : ""}</p>
+          loading && <SkeletonDetail cards={2} />
         )}
       </main>
     );
@@ -67,7 +72,7 @@ export function ActiveWorkout({ id }: { id: string }) {
       <header className="workout-head">
         <div className="head-row">
           <button className="btn quiet back" onClick={() => navigate(paths.home)}>‹ History</button>
-          <span className="timer" role="timer" aria-label="Elapsed time">{formatElapsed(workout.started_at, now)}</span>
+          <ElapsedTimer startedAt={workout.started_at} />
         </div>
         <TitleField key={workout.id} value={workout.title ?? ""} onCommit={(t) => void rename(t)} />
         <div className="gym-line">
@@ -111,6 +116,12 @@ export function ActiveWorkout({ id }: { id: string }) {
   );
 }
 
+/** The running clock. It owns the one-second tick so nothing else on the screen redraws with it. */
+function ElapsedTimer({ startedAt }: { startedAt: string }) {
+  const now = useNow(1000);
+  return <span className="timer" role="timer" aria-label="Elapsed time">{formatElapsed(startedAt, now)}</span>;
+}
+
 /** Already finished elsewhere: show the recap instead. */
 function Redirect({ to }: { to: string }) {
   useEffect(() => navigate(to, { replace: true }), [to]);
@@ -137,7 +148,7 @@ function TitleField({ value, onCommit }: { value: string; onCommit: (v: string) 
   );
 }
 
-function ExerciseCard({ we }: { we: WorkoutExercise }) {
+const ExerciseCard = memo(function ExerciseCard({ we }: { we: WorkoutExercise }) {
   const account = useAuth((s) => s.user?.unit_system ?? "metric");
   const unit = exerciseUnit(we, account);
   const kind = we.kind;
@@ -213,4 +224,4 @@ function ExerciseCard({ we }: { we: WorkoutExercise }) {
       />
     </section>
   );
-}
+});

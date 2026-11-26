@@ -1,12 +1,26 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 // @ts-expect-error type error without @types/node package
 import process from "node:process";
+import { contentSecurityPolicy, targetOf } from "./src/lib/csp";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
-export default defineConfig(() => ({
-  plugins: [react()],
+/** Puts the Content-Security-Policy into index.html for builds only (the dev server needs eval and a websocket). */
+function csp(mode: string): Plugin {
+  return {
+    name: "metamorph-csp",
+    apply: "build",
+    transformIndexHtml(html) {
+      const apiUrl = loadEnv(mode, process.cwd(), "VITE_").VITE_API_URL ?? "";
+      const policy = contentSecurityPolicy(targetOf(mode), apiUrl);
+      return html.replace("<head>", `<head>\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`);
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), csp(mode)],
 
   // What is shown at the bottom of the You tab, so a deploy is visible: the version from package.json, and the
   // commit CI built from (GitHub Actions sets GITHUB_SHA; a build on a laptop has none and says so).

@@ -208,6 +208,7 @@ export const api = {
   // ---- social ----
   searchPeople: (q: string) => request<Person[]>("GET", "/people", { query: { q } }),
   getPerson: (id: string) => request<PersonProfile>("GET", `/people/${id}`),
+  personConsistency: (id: string, weeks?: number) => request<Consistency>("GET", `/people/${id}/consistency`, { query: { weeks } }),
   personWorkouts: (id: string, limit = 50) => request<WorkoutSummary[]>("GET", `/people/${id}/workouts`, { query: { limit } }),
   personWorkout: (id: string, workoutId: string) => request<FriendWorkout>("GET", `/people/${id}/workouts/${workoutId}`),
   likeWorkout: (id: string, workoutId: string) => request<Likes>("PUT", `/people/${id}/workouts/${workoutId}/like`, { body: {} }),

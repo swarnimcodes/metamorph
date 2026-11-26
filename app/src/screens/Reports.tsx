@@ -7,6 +7,7 @@ import { keys } from "../lib/queryKeys";
 import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
 import { errMsg } from "../stores/auth";
+import { SkeletonRows } from "../components/Skeleton";
 
 /** The report queue, for moderators and admins. */
 export function Reports() {
@@ -38,7 +39,7 @@ export function Reports() {
         ))}
       </div>
       {error && <p className="error" role="alert">{error}</p>}
-      {loading && <p className="dim empty">Loading…</p>}
+      {loading && <SkeletonRows count={3} label="Loading reports" />}
       {!loading && reports.length === 0 && <p className="dim empty">{status === "open" ? "No open reports." : "Nothing resolved yet."}</p>}
       {reports.length > 0 && (
         <ul className="stack">

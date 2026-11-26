@@ -13,6 +13,7 @@ import { useGym, useGymHistory } from "../lib/queries";
 import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
 import { errMsg } from "../stores/auth";
+import { SkeletonDetail } from "../components/Skeleton";
 
 export function GymPage({ id }: { id: string }) {
   const { detail, error, reload } = useGym(id);
@@ -56,7 +57,7 @@ export function GymPage({ id }: { id: string }) {
           <button className="btn" onClick={reload}>Retry</button>
         </div>
       )}
-      {!detail && !error && <p className="dim empty">Loading…</p>}
+      {!detail && !error && <SkeletonDetail />}
       {detail && can && (
         <>
           <header className="stack-sm">

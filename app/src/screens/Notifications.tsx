@@ -5,6 +5,7 @@ import { socialChanged } from "../lib/invalidate";
 import { describeNotification } from "../lib/notifications";
 import { useNotifications } from "../lib/queries";
 import { navigate, paths } from "../router";
+import { SkeletonRows } from "../components/Skeleton";
 
 export function Notifications() {
   const { data, loading, error } = useNotifications();
@@ -23,7 +24,7 @@ export function Notifications() {
       <button className="btn quiet back" onClick={() => navigate(paths.social)}>‹ Social</button>
       <header className="stack-sm"><h1>Notifications</h1></header>
       {error && <p className="error" role="alert">{error}</p>}
-      {loading && <p className="dim empty">Loading…</p>}
+      {loading && <SkeletonRows count={4} label="Loading notifications" />}
       {data && data.items.length === 0 && <p className="dim empty">Nothing yet. Friend requests and likes show up here.</p>}
       {data && data.items.length > 0 && (
         <ul className="card history">

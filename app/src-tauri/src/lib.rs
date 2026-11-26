@@ -5,7 +5,10 @@ pub fn run() {
         .plugin(tauri_plugin_google_auth::init());
     // Android: the browser sign-in comes back to the app through a deep link (see src/lib/google.ts).
     #[cfg(mobile)]
-    let builder = builder.plugin(tauri_plugin_deep_link::init());
+    let builder = builder
+        .plugin(tauri_plugin_deep_link::init())
+        // A short buzz when a set is added, a workout finished, a friend accepted (see src/lib/haptics.ts).
+        .plugin(tauri_plugin_haptics::init());
     builder
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

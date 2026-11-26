@@ -6,6 +6,7 @@ import { ExternalLink } from "../components/ExternalLink";
 import { BUILD_LABEL } from "../lib/build";
 import { PRIVACY_URL } from "../lib/links";
 import type { UnitSystem } from "../api/types";
+import { haptic, hapticsAvailable, hapticsEnabled, setHapticsEnabled } from "../lib/haptics";
 import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
 import { errMsg, useAuth } from "../stores/auth";
@@ -20,6 +21,7 @@ export function You() {
   const updateProfile = useAuth((s) => s.updateProfile);
   const logout = useAuth((s) => s.logout);
   const [busy, setBusy] = useState(false);
+  const [buzz, setBuzz] = useState(hapticsEnabled());
   const [deleting, setDeleting] = useState(false);
 
   async function choose(next: UnitSystem) {
@@ -60,6 +62,28 @@ export function You() {
         </ToggleGroup>
         <p className="dim small">Weights are stored in kg and converted for display.</p>
       </section>
+
+      {hapticsAvailable() && (
+        <section className="card stack" aria-label="Feedback">
+          <h2>Haptic feedback</h2>
+          <ToggleGroup
+            className="type-group"
+            value={[buzz ? "on" : "off"]}
+            onValueChange={(v) => {
+              if (!v[0]) return;
+              const on = v[0] === "on";
+              setBuzz(on);
+              setHapticsEnabled(on);
+              if (on) haptic("tap");
+            }}
+            aria-label="Haptic feedback"
+          >
+            <Toggle value="on" className="type-opt">On</Toggle>
+            <Toggle value="off" className="type-opt">Off</Toggle>
+          </ToggleGroup>
+          <p className="dim small">A short buzz when you add a set, finish a workout or like something.</p>
+        </section>
+      )}
 
       {user && user.role !== "user" && (
         <section className="card stack" aria-label="Moderation">

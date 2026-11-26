@@ -183,6 +183,12 @@ export function usePersonWorkouts(id: string, enabled: boolean) {
   return { workouts: query.data ?? [], loading: enabled && query.isPending };
 }
 
+/** A friend's activity calendar, for the heatmap on their profile. */
+export function usePersonConsistency(id: string, enabled: boolean) {
+  const query = useQuery({ queryKey: keys.people.consistency(id), queryFn: () => api.personConsistency(id), enabled });
+  return { data: query.data ?? null, loading: enabled && query.isPending };
+}
+
 export function usePersonWorkout(id: string, workoutId: string) {
   const query = useQuery({ queryKey: keys.people.workout(id, workoutId), queryFn: () => api.personWorkout(id, workoutId) });
   return { data: query.data ?? null, error: query.isError ? message(query.error) : null };

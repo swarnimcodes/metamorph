@@ -4,6 +4,7 @@ import { formatDay } from "../lib/format";
 import { navigate, paths } from "../router";
 import { useAuth } from "../stores/auth";
 import { useConsistency, useStatsExercises } from "../lib/queries";
+import { SkeletonDetail } from "../components/Skeleton";
 
 export function Stats() {
   const unit = useAuth((s) => s.user?.unit_system ?? "metric");
@@ -32,7 +33,7 @@ export function Stats() {
           {consistencyError} <button className="link" onClick={retryConsistency}>Retry</button>
         </p>
       )}
-      {!consistency && !consistencyError && <p className="dim empty">Loading…</p>}
+      {!consistency && !consistencyError && <SkeletonDetail cards={2} />}
 
       {consistency && (
         <>

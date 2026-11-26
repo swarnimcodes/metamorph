@@ -8,6 +8,7 @@ import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
 import { errMsg } from "../stores/auth";
 import { useNow } from "../lib/useNow";
+import { SkeletonRows } from "../components/Skeleton";
 
 export function Home() {
   const { items, pending, hasMore, loadMore, loadingMore, error, retry } = useHistory();
@@ -88,7 +89,7 @@ export function Home() {
       ))}
 
       {!pending && !error && finished.length === 0 && !unfinished && <p className="dim empty">No workouts yet. Start your first one.</p>}
-      {pending && !error && <p className="dim empty">Loading…</p>}
+      {pending && !error && <SkeletonRows count={5} label="Loading your workouts" />}
       {hasMore && (
         <button className="btn quiet" onClick={loadMore} disabled={loadingMore}>
           {loadingMore ? "Loading…" : "Show earlier"}

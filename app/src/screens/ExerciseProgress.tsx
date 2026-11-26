@@ -12,6 +12,7 @@ import { kgToDisplay, weightLabel } from "../lib/units";
 import { navigate, paths } from "../router";
 import { useAuth } from "../stores/auth";
 import { useBodyWeights, useProgress, useStatsExercises } from "../lib/queries";
+import { SkeletonDetail } from "../components/Skeleton";
 
 const kgText = (kg: number, unit: UnitSystem) => formatValue(kgToDisplay(kg, unit) ?? 0, "weight", unit);
 
@@ -103,7 +104,7 @@ export function ExerciseProgress({ id, variant, from }: { id: string; variant: s
           {error} <button className="link" onClick={retryProgress}>Retry</button>
         </p>
       )}
-      {!data && !error && <p className="dim empty">Loading…</p>}
+      {!data && !error && <SkeletonDetail cards={2} />}
       {data && (
         <>
           <header className="stack-sm">

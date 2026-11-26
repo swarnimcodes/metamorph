@@ -7,6 +7,7 @@ import { useWorkoutDetail } from "../lib/queries";
 import { toastError } from "../lib/toast";
 import { navigate, paths } from "../router";
 import { errMsg, useAuth } from "../stores/auth";
+import { SkeletonDetail } from "../components/Skeleton";
 
 export function WorkoutDetail({ id }: { id: string }) {
   const unit = useAuth((s) => s.user?.unit_system ?? "metric");
@@ -32,7 +33,7 @@ export function WorkoutDetail({ id }: { id: string }) {
     <main className="screen medium">
       <button className="btn quiet back" onClick={() => navigate(paths.home)}>‹ History</button>
       {error && <p className="error" role="alert">{error}</p>}
-      {!w && !error && <p className="dim empty">Loading…</p>}
+      {!w && !error && <SkeletonDetail />}
       {w && (
         <>
           <WorkoutView w={w} unit={unit} progressFrom={paths.detail(id)} />

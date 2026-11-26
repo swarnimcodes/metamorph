@@ -663,3 +663,39 @@ details > summary { cursor: pointer; padding: var(--space-2) 0; }
 .sidebar-tab .nav-badge { position: static; margin-left: auto; }
 .social-tabs.two { grid-template-columns: repeat(2, 1fr); }
 .person-main.static { cursor: default; }
+
+/* Loading skeletons: grey blocks the size of what is coming, shimmering slowly. Reduced motion keeps them still. */
+@keyframes shimmer { to { background-position: -200% 0; } }
+.skeleton {
+  display: block;
+  background: linear-gradient(90deg, var(--surface-2) 25%, color-mix(in srgb, var(--text) 9%, var(--surface-2)) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: shimmer 1.6s linear infinite;
+}
+.skeleton-list { pointer-events: none; }
+.skeleton-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-1); }
+.skeleton-row .row-main { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.skeleton-list .person-text { gap: 8px; }
+
+/* Moving between screens (router.ts navigate): the old screen fades out, the new one rises in. The tab bar and the
+   sidebar are named so they stay put instead of fading with the page. */
+.tabbar { view-transition-name: tabbar; }
+.sidebar { view-transition-name: sidebar; }
+::view-transition-old(root) { animation: 110ms ease-out both vt-out; }
+::view-transition-new(root) { animation: 220ms var(--ease) both vt-in; }
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(8px); } }
+/* The screens already fade themselves in when they mount; during a transition that would play twice. */
+html.vt-active .screen, html.vt-active .screen > :not(.bar) { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+}
+
+/* Feedback: small things pop or fade in when an action lands. All of it stops under prefers-reduced-motion (above). */
+@keyframes pop { 0% { transform: scale(0.6); } 45% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.heart { display: inline-block; }
+.like-btn[aria-pressed="true"] .heart { animation: pop 340ms var(--ease); }
+.badge { animation: pop 320ms var(--ease); }
+.gym-actions .chip.static { animation: pop 260ms var(--ease); }
+.person-row, .gym-row, .history > li, .history-list > li { animation: fade-in 200ms ease-out; }
