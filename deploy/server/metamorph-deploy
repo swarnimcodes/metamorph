@@ -28,7 +28,9 @@ NEW_WEB="$INBOX/web.tar.gz"
 # Refuse anything that does not look like what CI builds, before touching the live files.
 [ -f "$NEW_BIN" ] && [ -f "$NEW_WEB" ] || { echo "nothing to deploy in $INBOX" >&2; exit 1; }
 [ "$(head -c 4 "$NEW_BIN" | od -An -c | tr -d ' \n')" = '177ELF' ] || { echo "the binary is not an ELF executable" >&2; exit 1; }
-tar -tzf "$NEW_WEB" | grep -qx './index.html' || { echo "the web archive has no index.html" >&2; exit 1; }
+# List first, then grep: `tar | grep -q` can kill tar with SIGPIPE, and pipefail then reports a good archive as bad.
+listing="$(tar -tzf "$NEW_WEB")" || { echo "the web archive cannot be read" >&2; exit 1; }
+grep -qx './index.html' <<<"$listing" || { echo "the web archive has no index.html" >&2; exit 1; }
 
 restore_contexts() { command -v restorecon >/dev/null && restorecon -R "$BIN" "$WEB" || true; }
 
