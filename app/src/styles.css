@@ -618,3 +618,6 @@ a.chip { text-decoration: none; }
 }
 .suggest li { padding: var(--space-3); border-radius: 8px; color: var(--text); cursor: pointer; }
 .suggest li[data-active], .suggest li:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.chip.role { margin-left: var(--space-2); text-transform: capitalize; }
+.history-list li[data-reverted] p:not(:first-child) { text-decoration: line-through; color: var(--text-dim); }
+.history-list .revert { align-self: flex-start; }

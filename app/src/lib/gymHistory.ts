@@ -29,8 +29,29 @@ export function countryName(code: string): string {
   }
 }
 
+/** What an entry was, when it is more than a list of changed fields. */
+export function editTitle(edit: Pick<GymEdit, "kind" | "changes">): string | null {
+  switch (edit.kind) {
+    case "verify":
+      return "Marked verified";
+    case "unverify":
+      return "Verification removed";
+    case "delete":
+      return "Deleted";
+    case "revert":
+      return "Reverted an edit";
+    case "merge": {
+      const from = edit.changes.merged_gym?.from;
+      return from ? `Merged in “${from}”` : "Merged a duplicate";
+    }
+    default:
+      return null;
+  }
+}
+
 /** One edit as lines: "City: Pune → Pune City", "Chain added: Cult", "State removed". */
-export function describeEdit(edit: Pick<GymEdit, "changes">): string[] {
+export function describeEdit(edit: Pick<GymEdit, "kind" | "changes">): string[] {
+  if (edit.kind !== "edit" && edit.kind !== "revert") return [];
   const show = (field: string, v: string) => (field === "country_code" ? countryName(v) : v);
   const line = (field: string, c: GymChange): string => {
     const label = FIELD_LABEL[field] ?? field;

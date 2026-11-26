@@ -6,6 +6,8 @@ export type ExerciseKind = "weight_reps" | "bodyweight_reps" | "duration" | "dis
 export type SetType = "working" | "warmup" | "drop" | "failure";
 export type TagCategory = "equipment" | "grip" | "angle" | "stance" | "other";
 
+export type Role = "user" | "moderator" | "admin";
+
 export interface Me {
   id: string;
   username: string;
@@ -14,6 +16,8 @@ export interface Me {
   avatar_url: string | null;
   unit_system: UnitSystem;
   timezone: string;
+  /** What the account may do to the shared gym directory. Granted by an operator; the app never sets it. */
+  role: Role;
 }
 
 export interface LoginResponse {
@@ -183,13 +187,21 @@ export interface NewGym {
 /** Omitted = unchanged; a blank string clears an optional field. */
 export type GymUpdate = Partial<Omit<NewGym, "force">>;
 
+/** What your role allows on one gym. The server enforces it; the app only shows or hides buttons. */
+export interface GymAbilities {
+  edit: boolean;
+  verify: boolean;
+  revert: boolean;
+  merge: boolean;
+  delete: boolean;
+}
+
 export interface GymDetail {
   gym: Gym;
   /** Your own workouts logged here. */
   visits: number;
   last_visit: string | null;
-  /** False for verified gyms. */
-  editable: boolean;
+  can: GymAbilities;
 }
 
 export interface GymChange {
@@ -197,12 +209,20 @@ export interface GymChange {
   to: string | null;
 }
 
+export type GymEditKind = "edit" | "verify" | "unverify" | "delete" | "merge" | "revert";
+
 export interface GymEdit {
   id: string;
-  /** Editors are never named: it was you or someone else. */
+  kind: GymEditKind;
   by_me: boolean;
+  /** The editor's name: only moderators and admins are told. */
+  by: string | null;
   at: string;
   changes: Record<string, GymChange>;
+  /** A later revert undid this edit. */
+  reverted: boolean;
+  /** You may revert it now. */
+  revertible: boolean;
 }
 
 // ---- Stats ----------------------------------------------------------------

@@ -136,6 +136,30 @@ Caddy requests the certificate when it starts, so DNS has to resolve first.
 The last line should print `{"status":"ok"}` from `https://metamorph.smarniw.com/api/health`.
 The API applies its migrations at startup (`RUN_MIGRATIONS=true`).
 
+## Roles: admins and moderators
+
+Everyone signs up as a `user`. Roles are granted by hand in the database; the API has no way to change one, not even
+your own. What each role may do to the shared gym directory:
+
+| | user | moderator | admin |
+|---|---|---|---|
+| add a gym, edit an unverified gym | yes | yes | yes |
+| edit a verified gym | no | yes | yes |
+| mark verified / remove verification | no | yes | yes |
+| revert someone's edit, merge a duplicate gym | no | yes | yes |
+| delete a gym | no | no | yes |
+
+Ordinary users may make 30 gym edits an hour; moderators and admins are not limited. Only moderators and admins see who
+made an edit. The rules live in `internal/gym/policy.go` in the API repository.
+
+```
+sudo -u postgres psql metamorph -c "update users set role = 'admin' where email = 'you@example.com'"
+sudo -u postgres psql metamorph -c "update users set role = 'moderator' where username = 'someone'"
+sudo -u postgres psql metamorph -c "update users set role = 'user' where username = 'someone'"
+```
+
+The app picks the new role up the next time it loads your profile (reopen the app).
+
 ## Operating it
 
 ```

@@ -16,7 +16,7 @@ vi.mock("../lib/timezone", async (original) => ({
 import { useAuth } from "./auth";
 
 const me = (timezone: string): Me => ({
-  id: "u1", username: "u", display_name: "U", email: "u@example.com", avatar_url: null, unit_system: "metric", timezone,
+  id: "u1", username: "u", display_name: "U", email: "u@example.com", avatar_url: null, unit_system: "metric", timezone, role: "user",
 });
 
 beforeEach(() => {

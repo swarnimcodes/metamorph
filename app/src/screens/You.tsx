@@ -37,7 +37,10 @@ export function You() {
     <main className="screen">
       <header className="stack-sm">
         <h1>You</h1>
-        <p className="dim">{user?.display_name}{user?.username && ` · @${user.username}`}</p>
+        <p className="dim">
+          {user?.display_name}{user?.username && ` · @${user.username}`}
+          {user && user.role !== "user" && <span className="chip static role"> {user.role}</span>}
+        </p>
       </header>
       <section className="card stack" aria-label="Units">
         <h2>Weight units</h2>
