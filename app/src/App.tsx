@@ -5,6 +5,7 @@ import { Toasts } from "./components/Toasts";
 import { shortcutFor } from "./lib/shortcuts";
 import { navigate, paths, useRoute } from "./router";
 import { ActiveWorkout } from "./screens/ActiveWorkout";
+import { AdminPeople } from "./screens/AdminPeople";
 import { FriendWorkout } from "./screens/FriendWorkout";
 import { GymPage } from "./screens/GymPage";
 import { Home } from "./screens/Home";
@@ -87,6 +88,7 @@ export default function App() {
   else if (route.name === "friendWorkout") content = <FriendWorkout id={route.id} workoutId={route.workoutId} />;
   else if (route.name === "notifications") content = <Notifications />;
   else if (route.name === "reports") content = <Reports />;
+  else if (route.name === "adminPeople") content = <AdminPeople />;
   else if (route.name === "social") content = <Social />;
   else content = <Home />;
 
@@ -100,7 +102,7 @@ export default function App() {
         ? "progress"
         : route.name === "social" || route.name === "gym" || route.name === "person" || route.name === "friendWorkout" || route.name === "notifications"
           ? "social"
-          : route.name === "you" || route.name === "reports"
+          : route.name === "you" || route.name === "reports" || route.name === "adminPeople"
             ? "you"
             : null;
 

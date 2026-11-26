@@ -220,6 +220,22 @@ export function useUnreadCount(enabled = true) {
   return query.data?.count ?? 0;
 }
 
+/** The admin's people list: debounced search, or only the moderators and admins. */
+export function useAdminUsers(q: string, filter: "all" | "staff") {
+  const needle = q.trim();
+  const settled = useDebounced(needle, 250);
+  const query = useQuery({
+    queryKey: keys.admin.users(settled, filter),
+    queryFn: () => api.adminUsers(settled, filter),
+    placeholderData: keepPreviousData,
+  });
+  return {
+    users: query.data ?? [],
+    loading: query.isPending || needle !== settled || query.isFetching,
+    error: query.isError && !query.data ? message(query.error) : null,
+  };
+}
+
 export function useReports(status: "open" | "resolved") {
   const query = useQuery({ queryKey: keys.reports.list(status), queryFn: () => api.reports(status) });
   return { reports: query.data ?? [], loading: query.isPending, error: query.isError ? message(query.error) : null };

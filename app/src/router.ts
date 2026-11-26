@@ -13,6 +13,7 @@ export type Route =
   | { name: "friendWorkout"; id: string; workoutId: string }
   | { name: "notifications" }
   | { name: "reports" }
+  | { name: "adminPeople" }
   | {
       name: "exercise";
       id: string;
@@ -45,6 +46,7 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === "people" && parts[1]) return { name: "person", id: parts[1] };
   if (parts[0] === "notifications") return { name: "notifications" };
   if (parts[0] === "reports") return { name: "reports" };
+  if (parts[0] === "admin" && parts[1] === "people") return { name: "adminPeople" };
   if (parts[0] === "gyms" && parts[1]) return { name: "gym", id: parts[1] };
   if (parts[0] === "social") return { name: "social" };
   if (parts[0] === "you" || parts[0] === "settings") return { name: "you" };
@@ -87,4 +89,5 @@ export const paths = {
   friendWorkout: (id: string, workoutId: string) => `/people/${id}/workouts/${workoutId}`,
   notifications: "/notifications",
   reports: "/reports",
+  adminPeople: "/admin/people",
 };

@@ -44,9 +44,11 @@ interface ConfirmProps {
   confirmLabel: string;
   onConfirm: () => void;
   busy?: boolean;
+  /** Red for something destructive (the default); a normal button for a change that is not. */
+  tone?: "danger" | "normal";
 }
 
-export function Confirm({ open, onOpenChange, title, description, confirmLabel, onConfirm, busy }: ConfirmProps) {
+export function Confirm({ open, onOpenChange, title, description, confirmLabel, onConfirm, busy, tone = "danger" }: ConfirmProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -56,7 +58,7 @@ export function Confirm({ open, onOpenChange, title, description, confirmLabel, 
           <Dialog.Description className="dim">{description}</Dialog.Description>
           <div className="row-actions">
             <Dialog.Close className="btn">Cancel</Dialog.Close>
-            <button className="btn danger" onClick={onConfirm} disabled={busy}>
+            <button className={tone === "danger" ? "btn danger" : "btn primary"} onClick={onConfirm} disabled={busy}>
               {confirmLabel}
             </button>
           </div>

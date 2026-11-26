@@ -1,7 +1,7 @@
 import { isTauri } from "../lib/platform";
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, FriendRequests, FriendWorkout, Gym, GymDetail, GymEdit, GymUpdate, LastSession, Likes, Notifications, Person, PersonProfile, Relationship, Report, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UnitSystem, UsernameAvailability, Workout,
+  AdminUser, BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, FriendRequests, FriendWorkout, Gym, GymDetail, GymEdit, GymUpdate, LastSession, Likes, Notifications, Person, PersonProfile, Relationship, Report, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UnitSystem, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -224,6 +224,8 @@ export const api = {
   unreadNotifications: () => request<{ count: number }>("GET", "/notifications/unread"),
   markNotificationsRead: () => request<void>("POST", "/notifications/read", { body: {} }),
   report: (body: { user_id: string; workout_id?: string; reason: string }) => request<void>("POST", "/reports", { body }),
+  adminUsers: (q: string, filter: "all" | "staff") => request<AdminUser[]>("GET", "/admin/users", { query: { q, filter } }),
+  setUserRole: (id: string, role: "user" | "moderator") => request<AdminUser>("PUT", `/admin/users/${id}/role`, { body: { role } }),
   reports: (status: "open" | "resolved" = "open") => request<Report[]>("GET", "/reports", { query: { status } }),
   resolveReport: (id: string) => request<void>("POST", `/reports/${id}/resolve`, { body: {} }),
   consistency: (weeks?: number) => request<Consistency>("GET", "/stats/consistency", { query: { weeks } }),

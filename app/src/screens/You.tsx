@@ -64,7 +64,10 @@ export function You() {
       {user && user.role !== "user" && (
         <section className="card stack" aria-label="Moderation">
           <h2>Moderation</h2>
-          <button className="btn" onClick={() => navigate(paths.reports)}>Reports</button>
+          <div className="gym-actions">
+            <button className="btn" onClick={() => navigate(paths.reports)}>Reports</button>
+            {user.role === "admin" && <button className="btn" onClick={() => navigate(paths.adminPeople)}>People &amp; roles</button>}
+          </div>
         </section>
       )}
 

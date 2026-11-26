@@ -661,3 +661,5 @@ details > summary { cursor: pointer; padding: var(--space-2) 0; }
 .tab, .sidebar-tab { position: relative; }
 .nav-badge { top: 6px; right: calc(50% - 22px); }
 .sidebar-tab .nav-badge { position: static; margin-left: auto; }
+.social-tabs.two { grid-template-columns: repeat(2, 1fr); }
+.person-main.static { cursor: default; }

@@ -40,6 +40,10 @@ export const keys = {
     list: () => ["notifications", "list"] as const,
     unread: () => ["notifications", "unread"] as const,
   },
+  admin: {
+    all: ["admin"] as const,
+    users: (q: string, filter: string) => ["admin", "users", q, filter] as const,
+  },
   reports: {
     all: ["reports"] as const,
     list: (status: string) => ["reports", status] as const,

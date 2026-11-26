@@ -368,3 +368,14 @@ export interface Report {
   reporter: ReportPerson | null;
   target: ReportPerson;
 }
+
+// ---- Admin ----------------------------------------------------------------
+
+/** A person as an admin sees them in the role screen. Never includes an email. */
+export interface AdminUser {
+  id: string;
+  username: string;
+  display_name: string;
+  role: Role;
+  member_since: string;
+}
