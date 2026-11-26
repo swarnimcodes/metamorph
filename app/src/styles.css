@@ -601,3 +601,20 @@ a.chip { text-decoration: none; }
   .row-side { text-align: left; }
 }
 .quiet-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; } .quiet-link:hover { color: var(--text); text-decoration: underline; }
+
+/* Gym page and the location typeahead */
+.gym-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.gym-link { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; align-items: flex-start; }
+.gym-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.chip.verified { margin-left: var(--space-2); }
+.history-list { list-style: none; margin: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.history-list li { display: flex; flex-direction: column; gap: 2px; }
+.typeahead { position: relative; }
+.suggest {
+  list-style: none; margin: 0; padding: var(--space-1);
+  position: absolute; z-index: 5; top: 100%; left: 0; right: 0;
+  max-height: 240px; overflow-y: auto;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.suggest li { padding: var(--space-3); border-radius: 8px; color: var(--text); cursor: pointer; }
+.suggest li[data-active], .suggest li:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }

@@ -3,10 +3,11 @@ import { api, ApiError } from "../api/client";
 import type { Gym, NewGym } from "../api/types";
 import { gymLine } from "../lib/gyms";
 import { gymChanged } from "../lib/invalidate";
+import { emptyGymForm, GymForm } from "./GymForm";
 import { errMsg } from "../stores/auth";
 
 export function CreateGym({ initialName, onCreated }: { initialName: string; onCreated: (g: Gym) => void }) {
-  const [form, setForm] = useState({ name: initialName, chain: "", area: "", city: "", address: "", maps_url: "" });
+  const [form, setForm] = useState(emptyGymForm(initialName));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [similar, setSimilar] = useState<Gym[] | null>(null);
@@ -18,6 +19,8 @@ export function CreateGym({ initialName, onCreated }: { initialName: string; onC
     if (form.city.trim()) body.city = form.city.trim();
     if (form.maps_url.trim()) body.maps_url = form.maps_url.trim();
     if (form.address.trim()) body.address = form.address.trim();
+    if (form.state.trim()) body.state = form.state.trim();
+    if (form.country_code) body.country_code = form.country_code;
     if (force) body.force = true;
     setBusy(true);
     setError(null);
@@ -40,13 +43,6 @@ export function CreateGym({ initialName, onCreated }: { initialName: string; onC
     e.preventDefault();
     if (form.name.trim()) void create(false);
   };
-  const field = (key: keyof typeof form, label: string, required = false) => (
-    <label className="field">
-      <span>{label}</span>
-      <input value={form[key]} required={required} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
-    </label>
-  );
-
   if (similar) {
     return (
       <div className="stack">
@@ -69,15 +65,7 @@ export function CreateGym({ initialName, onCreated }: { initialName: string; onC
 
   return (
     <form className="stack" onSubmit={onSubmit}>
-      {field("name", "Name", true)}
-      {field("chain", "Chain (optional)")}
-      {field("area", "Area (optional)")}
-      {field("city", "City (optional)")}
-      {field("address", "Address (optional)")}
-      <label className="field">
-        <span>Google Maps link (optional)</span>
-        <input type="url" inputMode="url" placeholder="https://maps.app.goo.gl/…" value={form.maps_url} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
-      </label>
+      <GymForm value={form} onChange={setForm} />
       {error && <p className="error" role="alert">{error}</p>}
       <button className="btn primary big" disabled={busy || !form.name.trim()}>
         {busy ? "Creating…" : "Create gym"}

@@ -18,6 +18,9 @@ export const keys = {
   gyms: {
     all: ["gyms"] as const,
     search: (q: string) => ["gyms", "search", q] as const,
+    detail: (id: string) => ["gyms", "detail", id] as const,
+    history: (id: string) => ["gyms", "history", id] as const,
+    chains: () => ["gyms", "chains"] as const,
   },
   exercises: {
     all: ["exercises"] as const,

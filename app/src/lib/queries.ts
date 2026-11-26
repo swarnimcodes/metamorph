@@ -135,6 +135,22 @@ export function useGymSearchQuery(q: string, enabled = true) {
   };
 }
 
+export function useGym(id: string) {
+  const query = useQuery({ queryKey: keys.gyms.detail(id), queryFn: () => api.getGym(id) });
+  return { detail: query.data ?? null, error: query.isError ? message(query.error) : null, reload: () => void query.refetch() };
+}
+
+export function useGymHistory(id: string) {
+  const query = useQuery({ queryKey: keys.gyms.history(id), queryFn: () => api.gymHistory(id) });
+  return { edits: query.data ?? [], loading: query.isPending };
+}
+
+/** Chains already in the directory, for the chain field's suggestions. */
+export function useGymChains(enabled = true) {
+  const query = useQuery({ queryKey: keys.gyms.chains(), queryFn: () => api.gymChains(), enabled, staleTime: SEARCH_STALE_MS });
+  return query.data ?? [];
+}
+
 export function useExerciseSearch(q: string, enabled = true) {
   const needle = q.trim();
   const settled = useDebounced(needle, needle ? 250 : 0);

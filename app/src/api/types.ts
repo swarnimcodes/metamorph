@@ -163,6 +163,9 @@ export interface Gym {
   lng: number | null;
   maps_url: string | null;
   verified: boolean;
+  /** ISO 3166-1 alpha-2, upper case. */
+  country_code: string | null;
+  state: string | null;
 }
 
 export interface NewGym {
@@ -171,8 +174,35 @@ export interface NewGym {
   area?: string;
   address?: string;
   city?: string;
+  state?: string;
+  country_code?: string;
   maps_url?: string;
   force?: boolean;
+}
+
+/** Omitted = unchanged; a blank string clears an optional field. */
+export type GymUpdate = Partial<Omit<NewGym, "force">>;
+
+export interface GymDetail {
+  gym: Gym;
+  /** Your own workouts logged here. */
+  visits: number;
+  last_visit: string | null;
+  /** False for verified gyms. */
+  editable: boolean;
+}
+
+export interface GymChange {
+  from: string | null;
+  to: string | null;
+}
+
+export interface GymEdit {
+  id: string;
+  /** Editors are never named: it was you or someone else. */
+  by_me: boolean;
+  at: string;
+  changes: Record<string, GymChange>;
 }
 
 // ---- Stats ----------------------------------------------------------------

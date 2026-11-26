@@ -43,10 +43,10 @@ export function WorkoutDetail({ id }: { id: string }) {
             <p className="dim">
               {formatDate(w.started_at, w.timezone)} · {formatTime(w.started_at, w.timezone)}
               {w.ended_at && ` · ${formatDuration(w.started_at, w.ended_at)}`}
-              {w.gym && ` · ${w.gym.name}`}
             </p>
             {w.gym && (
-              <p>
+              <p className="gym-actions">
+                <button className="chip action" onClick={() => navigate(paths.gym(w.gym!.id))}>{w.gym.name}</button>
                 <ExternalLink className="chip action" href={directionsUrl(w.gym)} aria-label={`Directions to ${w.gym.name}`}>
                   Directions
                 </ExternalLink>

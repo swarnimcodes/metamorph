@@ -4,6 +4,7 @@ import { CreateGym } from "../components/CreateGym";
 import { Sheet } from "../components/Sheet";
 import { directionsUrl, gymLine } from "../lib/gyms";
 import { useGymSearch } from "../lib/useGymSearch";
+import { navigate, paths } from "../router";
 
 export function Social() {
   const [q, setQ] = useState("");
@@ -30,10 +31,10 @@ export function Social() {
           <ul className="rows card gym-grid" aria-busy={loading} aria-label="Gyms">
             {found.map((g) => (
               <li key={g.id} className="gym-row">
-                <span className="gym-main">
+                <button className="gym-main gym-link" onClick={() => navigate(paths.gym(g.id))} aria-label={`${g.name}, open gym`}>
                   <span className="card-title">{g.name}</span>
                   <span className="dim small">{gymLine(g) || "—"}</span>
-                </span>
+                </button>
                 <ExternalLink className="btn small-btn" href={directionsUrl(g)} aria-label={`Directions to ${g.name}`}>
                   Directions
                 </ExternalLink>

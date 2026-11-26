@@ -37,6 +37,17 @@ export function gymChanged(client: QueryClient = queryClient): Promise<void> {
   return client.invalidateQueries({ queryKey: keys.gyms.all });
 }
 
+/**
+ * A gym was edited. Unlike a new gym this reaches past workouts, which carry the gym's name and place, and
+ * the gym's own page and history.
+ */
+export function gymEdited(client: QueryClient = queryClient): Promise<void> {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: keys.gyms.all }),
+    client.invalidateQueries({ queryKey: keys.workouts.all }),
+  ]).then(() => undefined);
+}
+
 /** Sign-out or a different account: nothing cached may survive. */
 export function clearAll(client: QueryClient = queryClient): void {
   client.clear();

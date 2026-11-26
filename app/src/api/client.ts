@@ -1,7 +1,7 @@
 import { isTauri } from "../lib/platform";
 import { clearSession, loadSession, saveSession } from "./tokenStorage";
 import type {
-  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, LastSession, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UnitSystem, UsernameAvailability, Workout,
+  BodyWeightEntry, Consistency, Exercise, ExerciseProgress, StatsExercise, GoogleLoginResult, GoogleSignupBody, Gym, GymDetail, GymEdit, GymUpdate, LastSession, LoginResponse, Me, MeUpdate, NewGym, SetInput, Tag, UnitSystem, UsernameAvailability, Workout,
   WorkoutExercise, WorkoutSet, WorkoutSummary,
 } from "./types";
 
@@ -196,6 +196,10 @@ export const api = {
     request<LastSession>("GET", `/exercises/${exerciseId}/last`, { query: { variant_key: variantKey } }),
   searchGyms: (q: string, limit = 20) => request<Gym[]>("GET", "/gyms", { query: { q, limit } }),
   createGym: (body: NewGym) => request<Gym>("POST", "/gyms", { body }),
+  getGym: (id: string) => request<GymDetail>("GET", `/gyms/${id}`),
+  updateGym: (id: string, body: GymUpdate) => request<Gym>("PATCH", `/gyms/${id}`, { body }),
+  gymHistory: (id: string) => request<GymEdit[]>("GET", `/gyms/${id}/history`),
+  gymChains: () => request<string[]>("GET", "/gyms/chains"),
   consistency: (weeks?: number) => request<Consistency>("GET", "/stats/consistency", { query: { weeks } }),
   statsExercises: () => request<StatsExercise[]>("GET", "/stats/exercises"),
   /** variantKey: undefined = all variations, "" = untagged only. */
