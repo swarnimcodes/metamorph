@@ -84,6 +84,16 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          # Gradle downloads every Android library each run unless they are kept.
+          cache: gradle
+      # The NDK is the biggest download of the Android setup (about a gigabyte). Restored from the cache it is much
+      # quicker, and setup-android then finds it installed and skips it. A miss only costs the old download.
+      - name: Where the Android SDK lives
+        run: echo "ANDROID_SDK_DIR=${ANDROID_HOME:-$ANDROID_SDK_ROOT}" >> "$GITHUB_ENV"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ env.ANDROID_SDK_DIR }}/ndk/30.0.14904198
+          key: android-ndk-30.0.14904198-${{ runner.os }}
       - uses: android-actions/setup-android@v4
         with:
           packages: "platform-tools platforms;android-37.0 platforms;android-36 build-tools;37.0.0 ndk;30.0.14904198"
@@ -134,8 +144,8 @@ jobs:
       - name: Build and sign the APK and the Play bundle
         if: env.PUBLISH == 'true'
         run: |
-          ./deploy/android-release.sh
-          ./deploy/android-release.sh aab
+          # One build makes both: the web app, the Rust code and Gradle run once, not twice.
+          ./deploy/android-release.sh all
 
       - name: Build the APK, unsigned (test run)
         if: env.PUBLISH != 'true'
